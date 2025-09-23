@@ -1,0 +1,26 @@
+env/
+dist/
+build/
+*.log
+*.tmp
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+.DS_Store
+node_modules/
+*.env
+*.bak
+*.swp
+*.swo
+*.iml
+*.class
+*.jar
+*.war
+*.ear
+*.exe
+*.dll
+.expo/
+ready_to_print/
+pdfs/
+EO BATCH/
