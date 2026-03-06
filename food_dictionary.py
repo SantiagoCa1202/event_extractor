@@ -11,9 +11,6 @@ hot_items = [
     "farm eggs",
     "egg whites",
     "goat cheese",
-    "mozzarella",
-    "ham",
-    "bacon",
     "pork sausage",
     "turkey sausage",
     "croissant sandwich - smoked ham, egg patty, american cheese",
@@ -51,10 +48,7 @@ hot_items = [
     "three cheese",
     "smoked tri tip",
     "chimichurri",
-    "chipotle aioli",
-    "prosciutto",
     "hot coppa",
-    "salami",
     "sorpressata",
     "mini cheeseburger on broiche",
     "bbq pulled pork on hawaiian kings bread",
@@ -66,11 +60,8 @@ hot_items = [
     "smashed sweet potatoes",
     "bacon",
     "roasted peppers",
-    "cheddar",
-    "goat cheese",
     "gorgonzola crumbles",
     "chives",
-    "butter",
     "hot honey",
     "marshmallows",
     "grilled chicken",
@@ -99,7 +90,6 @@ hot_items = [
     "wild mushroom",
     "fried rice",
     "soy sauce",
-    "egg",
     "jasmine rice",
     "mongolian beef",
     "kung pao tofu",
@@ -112,7 +102,7 @@ hot_items = [
     "sour cream",
     "roasted tomato salsa",
 
-
+    "curry cauliflower over rice",
     "herb marinated chicken breast",
     "garlic & cajun shrimp",
     "roasted lemon thyme chicken breast",
@@ -182,10 +172,26 @@ hot_items = [
     "hawaiian buns",
     "vegetable dumplings",
     "kalua pork sliders",
-    "teriyaki chicken"
+    "teriyaki chicken",
+    "meatball",
+    "cured, smoked meats & vegetables",
+    "pesto grilled vegetables",
+    "seared salmon with bourbon miso & bok choy",
+    "roasted squash and onions",
+    "maple roasted carrots",
+    "green beans with pecans",
+    "charleston stone ground grits",
+    "cremini mushroom & artichoke gratin",
   ]
 
 cold_items = [
+    "chef's choice assorted desserts",
+    "sourdough roll", 
+    "ciabatta", 
+    "wheat hoagie roll",
+    "mozzarella",
+    "butter",
+    "chipotle aioli",
     "caesar in a glass",
     "cheeseburger sliders",
     "fresh garden vegetables",
@@ -421,7 +427,15 @@ cold_items = [
     "cesar salad",
     "tiramisu",
     "assorted chef's choice",
-    "space snacks"
+    "space snacks",
+    "baby field greens",
+    "key lime pie",
+    "blue moody cheese & chestnut honey",
+    "warm aged mont chevre cheese & raspberry preserve",
+    "tomme thomasville & spicy peach chutney",
+    "fruit glasses",
+    "almonds",
+
 
   ]
 drinks = [
@@ -462,6 +476,8 @@ drinks = [
 
 
 type_events_items = [
+  "from up north lunch table",
+  "market table",
   "plated breakfast",
   "the uptown",
   "omelette station",
@@ -508,6 +524,11 @@ type_events_items = [
   "continuous break",
   "garden vegetables & assorted fruit reception table",
   "fajita station",
+  "piedmont cured lunch table",
+  "all star breakfast",
+  "charlotte lunch table",
+  "bar b que lunch table",
+  "imported cheese reception table",
 ]
 
 

@@ -1,0 +1,79 @@
+{
+  "eggs": ["scrambled eggs"],
+  "bacon": ["applewood smoked thick cut bacon", "bacon", "bacon lardons"],
+  "oatmeal": ["steel cut oatmeal"],
+  "potatoes": [
+    "rosemary roasted potatoes",
+    "garlic mashed potatoes",
+    "rosemary roasted potato",
+    "yukon gold mash potato",
+    "roasted rosemary fingerling potato",
+    "yukon mashed potatoes",
+    "smashed sweet potatoes",
+    "breakfast potatoes"
+  ],
+  "chicken": [
+    "herb marinated chicken breast",
+    "roasted lemon thyme chicken breast",
+    "bbq chicken - thigh",
+    "chicken picatta",
+    "citrus polla asado",
+    "florentine stuffed chicken with spinach, mushroom, onion, and garlic cream sauce",
+    "grilled chicken"
+  ],
+  "shrimp": ["garlic & cajun shrimp", "bbq rub shrimp", "shrimp scampi", "shrimp"],
+  "vegetables": [
+    "marinated grilled vegetables",
+    "roasted cauliflower with curry",
+    "garlic & chili broccolini",
+    "balsamic glazed brussel sprouts",
+    "chili garlic broccolini",
+    "grilled wild mushrooms",
+    "roasted peppers",
+    "diced squash",
+    "spinach cavatappi",
+    "wild mushroom",
+    "micro basil",
+    "crispy onion"
+  ],
+  "beef": [
+    "steak medallions with red wine reduction",
+    "smoked brisket",
+    "meatball marinara",
+    "flank steak with chimichurri",
+    "smoked tri tip with chimichurri and chipotle aioli",
+    "roasted beef tenderloin",
+    "mini cheeseburger on brioche",
+    "brisket burnt ends"
+  ],
+  "fish": ["seared salmon with a cajun cream sauce", "flounder a la veracruz", "roasted mahi mahi with pina colada sauce"],
+  "pork": [
+    "herbs de provence pork loin",
+    "north carolina smoked pulled pork",
+    "smoked sausage",
+    "pork loin marsala",
+    "roasted pork in salsa verde",
+    "bbq pulled pork on hawaiian kings bread",
+    "cured pork for carbonara"
+  ],
+  "beans": ["sauteed green beans", "charro beans"],
+  "mac_and_cheese": ["creamy mac & cheese with breadcrumbs"],
+  "pasta": [
+    "vegetable lasagna",
+    "cheese ravioli ragout with grilled mushroom and spinach",
+    "spinach lasagna with bechamel, ricotta, and three cheese"
+  ],
+  "bread": ["rolls"],
+  "chile rellenos": ["chile rellenos with ranchero sauce"],
+  "rice": ["cilantro lime rice"],
+  "vegetarian": [
+    "green tomato with pimento cheese on brioche",
+    "roasted peppers",
+    "cheddar & goat cheese",
+    "gorgonzola crumbles",
+    "chives & butter",
+    "hot honey & marshmallows"
+  ],
+  "cheese": ["parmesan", "shredded parmesan"],
+  "sandwich": ["breakfast sandwiches"]
+}

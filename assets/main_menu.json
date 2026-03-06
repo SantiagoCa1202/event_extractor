@@ -1,0 +1,389 @@
+{
+  "menu": [
+    {
+      "menu_id": 101,
+      "title": "noda deli express buffet",
+      "category": "buffet",
+      "version": "2025-09-27",
+      "sections": {
+        "cold_items": [
+          {
+            "name": "greens",
+            "items": [
+              { "name": "baby gem lettuce", "type": "vegetable", "per_person": 50, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "cherry tomato", "type": "vegetable", "per_person": 30, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "cucumber", "type": "vegetable", "per_person": 40, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "shredded carrot", "type": "vegetable", "per_person": 30, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "shredded cheddar", "type": "cheese", "per_person": 20, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "black olives", "type": "vegetable", "per_person": 15, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "croutons", "type": "grain", "per_person": 15, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "buttermilk ranch", "type": "dressing", "per_person": 10, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "white balsamic dressing", "type": "dressing", "per_person": 10, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          },
+          {
+            "name": "sides",
+            "items": [
+              {
+                "name": "country potato salad: bacon, mustard, relish, egg, herbs, mayonnaise",
+                "type": "side",
+                "per_person": 80,
+                "unidad": "g",
+                "diet": "none",
+                "required": false
+              },
+              { "name": "kettle chips", "type": "side", "per_person": 50, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          },
+          {
+            "name": "breads",
+            "items": [
+              { "name": "white hoagie rolls", "type": "bread", "per_person": 1, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "kaiser wheat roll", "type": "bread", "per_person": 1, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "whole wheat flour tortillas", "type": "bread", "per_person": 1, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "sliced sourdough bread", "type": "bread", "per_person": 2, "unidad": "ud", "diet": "vegetarian", "required": true }
+            ]
+          },
+          {
+            "name": "spreads",
+            "items": [
+              { "name": "mayonnaise", "type": "spread", "per_person": 10, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "dijon mustard", "type": "spread", "per_person": 5, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "chipotle aioli", "type": "spread", "per_person": 10, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "pesto aioli", "type": "spread", "per_person": 10, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "oil", "type": "spread", "per_person": 5, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "vinegar", "type": "spread", "per_person": 5, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          },
+          {
+            "name": "meats",
+            "items": [
+              { "name": "turkey", "type": "protein", "per_person": 150, "unidad": "g", "diet": "none", "required": true },
+              { "name": "ham", "type": "protein", "per_person": 150, "unidad": "g", "diet": "none", "required": true },
+              { "name": "mortadella", "type": "protein", "per_person": 100, "unidad": "g", "diet": "none", "required": false },
+              { "name": "tuna salad", "type": "protein", "per_person": 120, "unidad": "g", "diet": "pescatarian", "required": false }
+            ]
+          },
+          {
+            "name": "cheese",
+            "items": [
+              { "name": "smoked gouda", "type": "cheese", "per_person": 20, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "sharp cheddar", "type": "cheese", "per_person": 20, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "pepper jack", "type": "cheese", "per_person": 20, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "swiss cheese", "type": "cheese", "per_person": 20, "unidad": "g", "diet": "vegetarian", "required": false }
+            ]
+          },
+          {
+            "name": "condiments",
+            "items": [
+              { "name": "tomato", "type": "condiment", "per_person": 15, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "onion", "type": "condiment", "per_person": 10, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "pickle spears", "type": "condiment", "per_person": 10, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "black olive", "type": "condiment", "per_person": 10, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          },
+          {
+            "name": "dessert",
+            "items": [
+              {
+                "name": "assorted cookies and dessert bars",
+                "type": "dessert",
+                "per_person": 80,
+                "unidad": "g",
+                "diet": "vegetarian",
+                "required": false
+              }
+            ]
+          }
+        ]
+      },
+      "rules": {
+        "cold_items": { "waste_percentage": 10 }
+      }
+    },
+    {
+      "menu_id": 102,
+      "title": "the uptown",
+      "category": "breakfast",
+      "version": "2025-09-30",
+      "sections": {
+        "cold_items": [
+          {
+            "name": "fruit",
+            "items": [
+              { "name": "fresh cut fruit", "type": "fruit", "per_person": 150, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "fresh sliced fruit", "type": "fruit", "per_person": 150, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "dried fruit", "type": "fruit", "per_person": 30, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "golden raisins", "type": "fruit", "per_person": 20, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          },
+          {
+            "name": "nuts & toppings",
+            "items": [
+              { "name": "nuts", "type": "protein", "per_person": 20, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "sliced almonds", "type": "protein", "per_person": 15, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "brown sugar", "type": "condiment", "per_person": 10, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          },
+          {
+            "name": "pastries",
+            "items": [
+              { "name": "breakfast pastries", "type": "pastry", "per_person": 2, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "croissants", "type": "pastry", "per_person": 1, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "mini biscuits", "type": "pastry", "per_person": 2, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "danish", "type": "pastry", "per_person": 1, "unidad": "ud", "diet": "vegetarian", "required": false },
+              { "name": "biscuits", "type": "pastry", "per_person": 1, "unidad": "ud", "diet": "vegetarian", "required": false }
+            ]
+          },
+          {
+            "name": "spreads",
+            "items": [
+              { "name": "strawberry", "type": "spread", "per_person": 10, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "apricot", "type": "spread", "per_person": 10, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          }
+        ],
+        "hot_items": [
+          {
+            "name": "eggs",
+            "items": [{ "name": "scrambled eggs", "type": "protein", "per_person": 2, "unidad": "ud", "diet": "vegetarian", "required": true }]
+          },
+          {
+            "name": "meats",
+            "items": [
+              { "name": "chicken sausage", "type": "protein", "per_person": 2, "unidad": "ud", "diet": "none", "required": false },
+              { "name": "applewood smoked thick cut bacon", "type": "protein", "per_person": 2, "unidad": "ud", "diet": "none", "required": false }
+            ]
+          },
+          {
+            "name": "grains",
+            "items": [{ "name": "steel cut oatmeal", "type": "grain", "per_person": 100, "unidad": "g", "diet": "vegan", "required": true }]
+          },
+          {
+            "name": "sides",
+            "items": [
+              { "name": "rosemary roasted potatoes", "type": "vegetable", "per_person": 100, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          }
+        ]
+      },
+      "rules": {
+        "cold_items": { "waste_percentage": 10 },
+        "hot_items": { "waste_percentage": 10 }
+      }
+    },
+    {
+      "menu_id": 103,
+      "title": "carolina bbq buffet",
+      "category": "buffet",
+      "version": "2025-09-30",
+      "sections": {
+        "cold_items": [
+          {
+            "name": "breads",
+            "items": [
+              { "name": "sliced texas toast", "type": "bread", "per_person": 2, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "sweet rolls", "type": "bread", "per_person": 1, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "butter", "type": "spread", "per_person": 10, "unidad": "g", "diet": "vegetarian", "required": false }
+            ]
+          },
+          {
+            "name": "greens",
+            "items": [
+              { "name": "baby gem lettuce", "type": "vegetable", "per_person": 50, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "spring mix", "type": "vegetable", "per_person": 50, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "cherry tomato", "type": "vegetable", "per_person": 30, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "cucumber", "type": "vegetable", "per_person": 40, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "shredded carrot", "type": "vegetable", "per_person": 30, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "cheddar", "type": "cheese", "per_person": 20, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "black olive", "type": "vegetable", "per_person": 15, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "croutons", "type": "grain", "per_person": 15, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "buttermilk ranch", "type": "dressing", "per_person": 10, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "white balsamic dressing", "type": "dressing", "per_person": 10, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          },
+          {
+            "name": "salads",
+            "items": [
+              { "name": "potato salad", "type": "side", "per_person": 80, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "coleslaw", "type": "side", "per_person": 80, "unidad": "g", "diet": "vegetarian", "required": false }
+            ]
+          },
+          {
+            "name": "condiments",
+            "items": [{ "name": "pickle chips", "type": "condiment", "per_person": 15, "unidad": "g", "diet": "vegan", "required": false }]
+          },
+          {
+            "name": "dessert",
+            "items": [{ "name": "assorted sliced cake", "type": "dessert", "per_person": 80, "unidad": "g", "diet": "vegetarian", "required": false }]
+          }
+        ],
+        "hot_items": [
+          {
+            "name": "proteins",
+            "items": [
+              { "name": "north carolina smoked pulled pork", "type": "protein", "per_person": 180, "unidad": "g", "diet": "none", "required": true },
+              { "name": "smoked brisket", "type": "protein", "per_person": 180, "unidad": "g", "diet": "none", "required": false },
+              { "name": "bbq chicken - thigh", "type": "protein", "per_person": 1, "unidad": "ud", "diet": "none", "required": true },
+              { "name": "bbq rub shrimp", "type": "protein", "per_person": 150, "unidad": "g", "diet": "pescatarian", "required": false },
+              { "name": "bbq rub", "type": "protein", "per_person": 150, "unidad": "g", "diet": "pescatarian", "required": false },
+              { "name": "smoked sausage", "type": "protein", "per_person": 150, "unidad": "g", "diet": "none", "required": false }
+            ]
+          },
+          {
+            "name": "sides",
+            "items": [
+              { "name": "creamy mac & cheese", "type": "grain", "per_person": 150, "unidad": "g", "diet": "vegetarian", "required": true },
+              { "name": "mac & cheese with breadcrumbs", "type": "grain", "per_person": 150, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "bbq baked beans", "type": "legume", "per_person": 120, "unidad": "g", "diet": "vegan", "required": true }
+            ]
+          },
+          {
+            "name": "condiments",
+            "items": [
+              { "name": "east bbq sauce", "type": "sauce", "per_person": 20, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "sweet bbq sauce", "type": "sauce", "per_person": 20, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          }
+        ]
+      },
+      "rules": {
+        "cold_items": { "waste_percentage": 10 },
+        "hot_items": { "waste_percentage": 10 }
+      }
+    },
+    {
+      "menu_id": 104,
+      "title": "fajita station",
+      "category": "station",
+      "version": "2025-09-30",
+      "sections": {
+        "cold_items": [
+          {
+            "name": "toppings",
+            "items": [
+              { "name": "sour cream", "type": "dairy", "per_person": 30, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "roasted tomato salsa", "type": "sauce", "per_person": 40, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "cheddar cheese", "type": "cheese", "per_person": 20, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "guacamole", "type": "dip", "per_person": 40, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "corn relish", "type": "vegetable", "per_person": 35, "unidad": "g", "diet": "vegan", "required": false }
+            ]
+          }
+        ],
+        "hot_items": [
+          {
+            "name": "proteins",
+            "items": [
+              { "name": "citrus marinated steak", "type": "protein", "per_person": 150, "unidad": "g", "diet": "none", "required": true },
+              { "name": "guajillo chicken", "type": "protein", "per_person": 150, "unidad": "g", "diet": "none", "required": true },
+              { "name": "chimichurri shrimp", "type": "protein", "per_person": 120, "unidad": "g", "diet": "pescatarian", "required": false }
+            ]
+          },
+          {
+            "name": "vegetables",
+            "items": [{ "name": "grilled peppers & onions", "type": "vegetable", "per_person": 80, "unidad": "g", "diet": "vegan", "required": true }]
+          },
+          {
+            "name": "carbs",
+            "items": [
+              { "name": "flour tortillas", "type": "bread", "per_person": 2, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "cilantro lime rice", "type": "grain", "per_person": 100, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "black beans", "type": "legume", "per_person": 100, "unidad": "g", "diet": "vegan", "required": true }
+            ]
+          }
+        ]
+      },
+      "rules": {
+        "cold_items": { "waste_percentage": 10 },
+        "hot_items": { "waste_percentage": 15 }
+      }
+    },
+    {
+      "menu_id": 105,
+      "title": "mac n' cheese bar",
+      "category": "station",
+      "version": "2025-09-30",
+      "sections": {
+        "cold_items": [
+          {
+            "name": "toppings",
+            "items": [
+              { "name": "butter cracker crumbs", "type": "topping", "per_person": 15, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "chives", "type": "herb", "per_person": 5, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "roasted tomato", "type": "vegetable", "per_person": 30, "unidad": "g", "diet": "vegan", "required": false },
+              { "name": "parmesan cheese", "type": "cheese", "per_person": 20, "unidad": "g", "diet": "vegetarian", "required": false },
+              { "name": "gorgonzola crumbles", "type": "cheese", "per_person": 20, "unidad": "g", "diet": "vegetarian", "required": false }
+            ]
+          }
+        ],
+        "hot_items": [
+          {
+            "name": "proteins",
+            "items": [
+              { "name": "grilled chicken", "type": "protein", "per_person": 150, "unidad": "g", "diet": "none", "required": true },
+              { "name": "brisket burnt ends", "type": "protein", "per_person": 150, "unidad": "g", "diet": "none", "required": true },
+              { "name": "bacon lardons", "type": "protein", "per_person": 80, "unidad": "g", "diet": "none", "required": false }
+            ]
+          },
+          {
+            "name": "vegetables",
+            "items": [{ "name": "grilled wild mushrooms", "type": "vegetable", "per_person": 100, "unidad": "g", "diet": "vegan", "required": false }]
+          },
+          {
+            "name": "base",
+            "items": [{ "name": "mac n' cheese", "type": "grain_dairy", "per_person": 200, "unidad": "g", "diet": "vegetarian", "required": true }]
+          }
+        ]
+      },
+      "rules": {
+        "cold_items": { "waste_percentage": 10 },
+        "hot_items": { "waste_percentage": 15 }
+      }
+    },
+    {
+      "menu_id": 106,
+      "title": "garden vegetables & assorted fruit reception table",
+      "category": "station",
+      "version": "2025-09-30",
+      "sections": {
+        "cold_items": [
+          {
+            "items": [
+              { "name": "fresh garden vegetables", "type": "vegetable", "per_person": 120, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "buttermilk & blue cheese dip", "type": "sauce", "per_person": 30, "unidad": "g", "diet": "vegetarian", "required": true },
+              { "name": "tomato and cream cheese dip", "type": "sauce", "per_person": 30, "unidad": "g", "diet": "vegetarian", "required": true },
+              { "name": "assorted fruit selection", "type": "fruit", "per_person": 150, "unidad": "g", "diet": "vegan", "required": true }
+            ]
+          }
+        ],
+        "hot_items": []
+      }
+    },
+    {
+      "menu_id": 9999,
+      "title": "unknown_menu",
+      "category": "unknown",
+      "version": "2025-09-27",
+      "sections": {
+        "cold_items": [
+          {
+            "items": [
+              { "name": "hard boiled eggs", "type": "vegetable", "per_person": 50, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "fresh jumbo cookies", "type": "vegetable", "per_person": 50, "unidad": "g", "diet": "vegan", "required": true },
+              { "name": "assorted pastries", "type": "pastries", "per_person": 50, "unidad": "g", "diet": "vegan", "required": true }
+            ]
+          }
+        ],
+        "hot_items": [
+          {
+            "items": [
+              { "name": "cheeseburger sliders", "type": "protein", "per_person": 2, "unidad": "ud", "diet": "none", "required": true },
+              { "name": "chicken sliders", "type": "protein", "per_person": 2, "unidad": "ud", "diet": "vegetarian", "required": true },
+              { "name": "wings", "type": "protein", "per_person": 2, "unidad": "ud", "diet": "vegetarian", "required": true }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
