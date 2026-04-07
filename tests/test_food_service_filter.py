@@ -18,6 +18,16 @@ class FoodServiceFilterTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertTrue(any("menu_items" in reason for reason in reasons))
 
+    def test_rejects_water_station_and_soft_drinks_only(self) -> None:
+        ok, reasons = is_food_service_function(
+            "Meeting",
+            "2:00 PM Meeting Cardinal Ballroom Foyer\n(25) Assorted Pepsi Products @ $4.5 Each\nWater Station",
+            menu_item_count=1,
+            item_names=["Assorted Pepsi Products"],
+        )
+        self.assertFalse(ok)
+        self.assertIn("excluded_non_food_beverage_service", reasons)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,7 +15,13 @@ from .validators import validate_event_payload
 def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict | None:
     menu_sections = extract_menu_sections(candidate.raw)
     menu_item_count = sum(len(section.items) for section in menu_sections)
-    is_food, filter_reasons = is_food_service_function(candidate.function_name, candidate.raw, menu_item_count)
+    item_names = [item.name for section in menu_sections for item in section.items]
+    is_food, filter_reasons = is_food_service_function(
+        candidate.function_name,
+        candidate.raw,
+        menu_item_count,
+        item_names,
+    )
     if not is_food:
         return None
 

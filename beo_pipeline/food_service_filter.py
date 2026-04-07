@@ -58,10 +58,36 @@ FUNCTION_HINT_TERMS = {
     "dinner",
 }
 
+NON_QUALIFYING_BEVERAGE_TERMS = {
+    "water station",
+    "bottled water",
+    "assorted pepsi products",
+    "assorted pepsi sodas",
+    "soft drinks",
+    "pepsi sodas",
+    "pepsi products",
+}
 
-def is_food_service_function(function_name: str, raw_block: str, menu_item_count: int = 0) -> tuple[bool, list[str]]:
+QUALIFYING_BEVERAGE_TERMS = {
+    "coffee",
+    "tea",
+    "bar",
+    "wine",
+    "beer",
+    "bourbon",
+    "cocktail",
+}
+
+
+def is_food_service_function(
+    function_name: str,
+    raw_block: str,
+    menu_item_count: int = 0,
+    item_names: list[str] | None = None,
+) -> tuple[bool, list[str]]:
     text = (raw_block or "").lower()
     reasons: list[str] = []
+    normalized_items = [item.lower() for item in (item_names or []) if item]
 
     for pattern in NEGATIVE_PATTERNS:
         if re.search(pattern, text):
@@ -78,4 +104,24 @@ def is_food_service_function(function_name: str, raw_block: str, menu_item_count
     if menu_item_count > 0:
         reasons.append(f"menu_items:{menu_item_count}")
 
+    if reasons and _is_non_qualifying_beverage_only(text, normalized_items):
+        return False, ["excluded_non_food_beverage_service"]
+
     return bool(reasons), reasons
+
+
+def _is_non_qualifying_beverage_only(text: str, item_names: list[str]) -> bool:
+    searchable = [text, *item_names]
+    has_excluded = any(any(term in value for term in NON_QUALIFYING_BEVERAGE_TERMS) for value in searchable)
+    has_qualifying = any(any(term in value for term in QUALIFYING_BEVERAGE_TERMS) for value in searchable)
+
+    if not has_excluded:
+        return False
+
+    food_terms_without_excluded = [
+        term
+        for term in FOOD_SERVICE_TERMS
+        if term not in NON_QUALIFYING_BEVERAGE_TERMS and term not in {"beverage", "station", "water station", "soda"}
+    ]
+    has_other_food_signal = any(any(term in value for term in food_terms_without_excluded) for value in searchable)
+    return not has_qualifying and not has_other_food_signal

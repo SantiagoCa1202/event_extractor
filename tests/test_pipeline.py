@@ -72,6 +72,25 @@ class PipelineTests(unittest.TestCase):
         spanning_break = next(event for event in coffee_breaks if event["service"]["time"]["start"] == "10:00 AM")
         self.assertEqual(spanning_break["source_trace"]["page_ranges"], ["1-2"])
 
+    def test_omits_meeting_with_only_water_station_and_pepsi(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 708251
+FUNCTION DAY/DATE: Monday, April 06, 2026
+ORGANIZATION: Maximo Utility Working Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+2:00 PM-5:00 PM Meeting Cardinal Ballroom Foyer 1 30
+2:00 PM Meeting Cardinal Ballroom Foyer
+(25) Assorted Pepsi Products @ $4.5 Each
+Water Station
+ROOM SETUP 2:00 PM-5:00 PM Meeting Cardinal Ballroom Foyer
+U-Shape
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(events, [])
+
     def test_builds_buffet_and_break_from_meeting_context(self) -> None:
         pages = [
             """EVENT ORDER Page # 1 of 2
