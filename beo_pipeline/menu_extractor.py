@@ -18,6 +18,7 @@ NOISE_PATTERNS = (
 )
 
 TITLE_HINTS = ("display", "station", "bar", "buffet", "continental", "break", "table")
+SNACK_HINTS = ("granola bar", "chips", "candy bar", "protein bar", "pastries", "whole fruit", "lemon bars", "cookies", "popcorn", "pretzels")
 BEVERAGE_HINTS = ("coffee", "tea", "juice", "water", "pepsi", "soda", "iced tea", "wine", "beer", "bourbon", "scotch")
 COURSE_HINTS = {
     "salad": "salad",
@@ -46,6 +47,14 @@ def extract_menu_sections(raw_block: str) -> list[MenuSection]:
         if _looks_like_block_header(line):
             continue
 
+        if _starts_snack_section(line, current):
+            current = _create_section("", preferred_type="snack_items")
+            sections.append(current)
+
+        if current is not None and current.type == "snack_items":
+            current.items.extend(normalize_item_line(line))
+            continue
+
         if current is not None and _looks_like_simple_item(line):
             current.items.extend(normalize_item_line(line))
             continue
@@ -58,7 +67,7 @@ def extract_menu_sections(raw_block: str) -> list[MenuSection]:
             continue
 
         dash_match = re.match(r"^([A-Za-z' ]{3,40})\s*-\s*(.+)$", line)
-        if dash_match and _looks_like_title(dash_match.group(1)):
+        if dash_match and _looks_like_dash_title(dash_match.group(1)):
             current = _create_section(dash_match.group(1))
             current.items.extend(normalize_item_line(dash_match.group(2)))
             sections.append(current)
@@ -121,9 +130,29 @@ def _looks_like_simple_item(line: str) -> bool:
     return len(line.split()) <= 4
 
 
-def _create_section(title: str) -> MenuSection:
+def _looks_like_dash_title(value: str) -> bool:
+    lower = value.lower().strip()
+    dash_title_hints = ("greens", "salad", "dessert", "sides", "beverages", "chef's choice")
+    return any(hint in lower for hint in dash_title_hints)
+
+
+def _starts_snack_section(line: str, current: MenuSection | None) -> bool:
+    if current is None:
+        return False
+    if current.type != "break_items":
+        return False
+    lower = line.lower()
+    return any(hint in lower for hint in SNACK_HINTS) and "charged on consumption" not in lower
+
+
+def _create_section(title: str, preferred_type: str | None = None) -> MenuSection:
     title = normalize_title(title)
     lower = title.lower()
+    if preferred_type == "snack_items":
+        section_type = "snack_items"
+        role = "bar"
+        course_type = "break"
+        return MenuSection(title=title, type=section_type, service_role=role, course_type=course_type)
     if "display" in lower:
         section_type = "display"
         role = "display"
