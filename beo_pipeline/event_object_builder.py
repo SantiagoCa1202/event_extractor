@@ -9,6 +9,7 @@ from .production_router import annotate_menu_sections_with_production
 from .schemas import BeoDocument, EventCandidate, SourceTrace, Staffing, to_dict
 from .service_classifier import classify_service
 from .setup_rules import evaluate_setup
+from .timeline_rules import build_timeline
 from .traceability import format_page_ranges, infer_confidence, summarize_snippets
 from .validators import validate_event_payload
 
@@ -31,7 +32,7 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
     if service_info["category"] == "plated":
         menu_style = None
     menu_sections_payload = annotate_menu_sections_with_production([to_dict(section) for section in menu_sections])
-    setup = evaluate_setup(service_info["category"])
+    setup = evaluate_setup(service_info["category"], candidate.room, candidate.gtd)
     staffing = _extract_staffing(candidate.raw)
     confidence = infer_confidence(candidate.attendance_match is not None, menu_item_count, len(filter_reasons))
     notes = list(filter_reasons)
@@ -60,13 +61,7 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
             "gtd": candidate.gtd,
             "menu_style": menu_style,
         },
-        "timeline": {
-            "setup": None,
-            "pickup_food": None,
-            "service_start": candidate.start,
-            "service_end": candidate.end,
-            "clean_up": None,
-        },
+        "timeline": build_timeline(candidate.start, candidate.end),
         "details": {
             "raw": candidate.raw,
             "menu_sections": menu_sections_payload,

@@ -65,12 +65,21 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(breakfast["service"]["meal_period"], "breakfast")
         self.assertEqual(breakfast["service"]["gtd"], 400)
         self.assertEqual(breakfast["source_trace"]["page_ranges"], ["1"])
+        self.assertEqual(breakfast["timeline"]["setup"], "6:20 AM")
+        self.assertEqual(breakfast["timeline"]["pickup_food"], "6:10 AM")
+        self.assertEqual(breakfast["timeline"]["clean_up"], "9:10 AM")
+        self.assertTrue(breakfast["setup"]["breakdown_station"]["required"])
+        self.assertEqual(breakfast["setup"]["breakdown_station"]["quantity"], 2)
+        self.assertEqual(breakfast["setup"]["breakdown_station"]["size"], "l")
 
         coffee_breaks = [event for event in events if event["service"]["category"] == "break"]
         self.assertEqual(len(coffee_breaks), 2)
         self.assertTrue(all("break" in event["tags"] for event in coffee_breaks))
         spanning_break = next(event for event in coffee_breaks if event["service"]["time"]["start"] == "10:00 AM")
         self.assertEqual(spanning_break["source_trace"]["page_ranges"], ["1-2"])
+        self.assertEqual(spanning_break["timeline"]["setup"], "9:20 AM")
+        self.assertEqual(spanning_break["timeline"]["pickup_food"], "9:10 AM")
+        self.assertEqual(spanning_break["timeline"]["clean_up"], "11:25 AM")
 
     def test_omits_meeting_with_only_water_station_and_pepsi(self) -> None:
         pages = [
@@ -123,6 +132,9 @@ Roasted Lemon Thyme Chicken Breast
         categories = {event["service"]["category"] for event in events}
         self.assertIn("buffet", categories)
         self.assertIn("break", categories)
+        lunch_buffet = next(event for event in events if event["service"]["category"] == "buffet")
+        self.assertFalse(lunch_buffet["setup"]["breakdown_station"]["required"])
+        self.assertEqual(lunch_buffet["setup"]["breakdown_station"]["quantity"], 0)
 
     def test_plated_event_has_no_menu_style(self) -> None:
         pages = [
@@ -147,6 +159,12 @@ Rounds of 10
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]["service"]["category"], "plated")
         self.assertIsNone(events[0]["service"]["menu_style"])
+        self.assertEqual(events[0]["timeline"]["setup"], "11:20 AM")
+        self.assertEqual(events[0]["timeline"]["pickup_food"], "11:10 AM")
+        self.assertEqual(events[0]["timeline"]["clean_up"], "1:40 PM")
+        self.assertTrue(events[0]["setup"]["breakdown_station"]["required"])
+        self.assertEqual(events[0]["setup"]["breakdown_station"]["quantity"], 2)
+        self.assertEqual(events[0]["setup"]["breakdown_station"]["size"], "l")
 
     def test_reception_keeps_undetailed_displays_and_stations(self) -> None:
         pages = [
@@ -190,6 +208,30 @@ Rounds of 10
             ["display", "display", "display", "station_items", "station_items", "station_items", "station_items"],
         )
         self.assertTrue(all(section["items"] == [] for section in event["details"]["menu_sections"]))
+        self.assertEqual(event["setup"]["breakdown_station"]["quantity"], 2)
+        self.assertEqual(event["setup"]["breakdown_station"]["size"], "l")
+
+    def test_events_under_25_guests_do_not_require_breakdown_station(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 708610
+FUNCTION DAY/DATE: Wednesday, April 08, 2026
+ORGANIZATION: Siemens Healthineers
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+12:00 PM-1:00 PM Lunch Buffet Executive Boardroom 12
+12:00 PM Lunch Buffet Executive Boardroom
+The Queens Table
+Assorted Rolls with Butter
+ROOM SETUP 12:00 PM-1:00 PM Lunch Buffet Executive Boardroom
+Boardroom
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(len(events), 1)
+        breakdown = events[0]["setup"]["breakdown_station"]
+        self.assertFalse(breakdown["required"])
+        self.assertEqual(breakdown["quantity"], 0)
 
 
 if __name__ == "__main__":
