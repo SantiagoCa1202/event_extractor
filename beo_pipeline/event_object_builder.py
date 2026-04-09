@@ -5,6 +5,7 @@ import re
 from .food_service_filter import is_food_service_function
 from .menu_extractor import derive_menu_style, extract_menu_sections
 from .menu_normalizer import build_menu_fingerprint
+from .production_router import annotate_menu_sections_with_production
 from .schemas import BeoDocument, EventCandidate, SourceTrace, Staffing, to_dict
 from .service_classifier import classify_service
 from .setup_rules import evaluate_setup
@@ -27,6 +28,9 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
 
     service_info = classify_service(candidate.function_name, candidate.raw, menu_sections)
     menu_style = derive_menu_style(candidate.raw, menu_sections)
+    if service_info["category"] == "plated":
+        menu_style = None
+    menu_sections_payload = annotate_menu_sections_with_production([to_dict(section) for section in menu_sections])
     setup = evaluate_setup(service_info["category"])
     staffing = _extract_staffing(candidate.raw)
     confidence = infer_confidence(candidate.attendance_match is not None, menu_item_count, len(filter_reasons))
@@ -65,7 +69,7 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
         },
         "details": {
             "raw": candidate.raw,
-            "menu_sections": [to_dict(section) for section in menu_sections],
+            "menu_sections": menu_sections_payload,
             "menu_fingerprint": build_menu_fingerprint(
                 [item.name for section in menu_sections for item in section.items]
             ),

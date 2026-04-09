@@ -124,6 +124,73 @@ Roasted Lemon Thyme Chicken Breast
         self.assertIn("buffet", categories)
         self.assertIn("break", categories)
 
+    def test_plated_event_has_no_menu_style(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 708547
+FUNCTION DAY/DATE: Wednesday, April 08, 2026
+ORGANIZATION: Maximo Utility Working Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+12:00 PM-1:00 PM Plated Lunch Carolina Ballroom 400
+12:00 PM Plated Lunch Carolina Ballroom
+Hot Plated Lunch
+Mixed Greens- Cucumber, Radish, Tomatoes, Carrots, Ranch and Balsamic Vinaigrette on Table
+Rolls with Butter
+Roasted Airline Chicken Breast with Herb Roasted Potatoes, Broccolini, and Lemon Thyme Jus
+Chef's Choice Dessert- Two Types at Alternative Place Settings
+ROOM SETUP 12:00 PM-1:00 PM Plated Lunch Carolina Ballroom
+Rounds of 10
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["service"]["category"], "plated")
+        self.assertIsNone(events[0]["service"]["menu_style"])
+
+    def test_reception_keeps_undetailed_displays_and_stations(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 708600
+FUNCTION DAY/DATE: Wednesday, April 08, 2026
+ORGANIZATION: Maximo Utility Working Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+5:00 PM-7:00 PM Reception Carolina Ballroom 250
+5:00 PM Reception Carolina Ballroom
+Cheese Display
+Vegetable Display
+Charcuterie Display
+Pepper Crusted Tenderloin Carving Station
+Turkey Breast Carving Station
+Cedar Plank Salmon Carving Station
+Mashed Potato Bar
+ROOM SETUP 5:00 PM-7:00 PM Reception Carolina Ballroom
+Rounds of 10
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(len(events), 1)
+        event = events[0]
+        self.assertEqual(event["service"]["category"], "reception")
+        self.assertEqual(
+            [section["title"] for section in event["details"]["menu_sections"]],
+            [
+                "Cheese Display",
+                "Vegetable Display",
+                "Charcuterie Display",
+                "Pepper Crusted Tenderloin Carving Station",
+                "Turkey Breast Carving Station",
+                "Cedar Plank Salmon Carving Station",
+                "Mashed Potato Bar",
+            ],
+        )
+        self.assertEqual(
+            [section["type"] for section in event["details"]["menu_sections"]],
+            ["display", "display", "display", "station_items", "station_items", "station_items", "station_items"],
+        )
+        self.assertTrue(all(section["items"] == [] for section in event["details"]["menu_sections"]))
+
 
 if __name__ == "__main__":
     unittest.main()

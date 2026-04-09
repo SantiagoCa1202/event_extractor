@@ -62,5 +62,12 @@ def _normalize_for_fingerprint(value: str) -> str:
 
 def _should_keep_whole(value: str) -> bool:
     lower = value.lower()
-    guarded_tokens = (" with ", " on table", " offered ", " preset ", " choice of ", "types at")
-    return any(token in lower for token in guarded_tokens)
+    guarded_tokens = (" with ", " on table", " offered ", " preset ", " choice of ", "types at", " sandwich - ")
+    if any(token in lower for token in guarded_tokens):
+        return True
+    if " - " in lower and any(
+        token in lower
+        for token in ("egg patty", "american cheese", "cheddar cheese", "smoked ham", "smoked bacon", "turkey sausage", "pork sage sausage")
+    ):
+        return True
+    return False
