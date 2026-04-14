@@ -741,6 +741,27 @@ class ProductionRouterTests(unittest.TestCase):
         self.assertEqual(items["(Passed) Beef Filet"], "hot_kitchen")
         self.assertEqual(items["(Passed) Bacon Wrapped Scallops"], "hot_kitchen")
 
+    def test_routes_pimento_shrimp_bruschetta_to_hot(self) -> None:
+        sections = [
+            {
+                "title": "Displayed",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {
+                        "name": "Pimento Cheese & Pickled Shrimp Bruschetta Crostini",
+                        "quantity": 650,
+                        "unit": "each",
+                        "source_text": "(650) (Displayed) Pimento Cheese & Pickled Shrimp Bruschetta Crostini @ $9.9 Each",
+                    }
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        item = annotated[0]["items"][0]
+        self.assertEqual(item["production_area"]["temperature_zone"], "hot_kitchen")
+
     def test_ignored_manual_items_do_not_appear_in_operational_split(self) -> None:
         sections = [
             {

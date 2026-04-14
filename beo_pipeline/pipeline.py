@@ -5,9 +5,18 @@ from .event_detector import detect_event_candidates
 from .event_object_builder import build_event_object
 
 
-def extract_events_from_pdf(pdf_path: str) -> list[dict]:
+def extract_events_from_pdf(
+    pdf_path: str,
+    *,
+    beo_type_override: str | None = None,
+    revision_number_override: int | None = None,
+) -> list[dict]:
     events: list[dict] = []
-    for document in parse_pdf_to_documents(pdf_path):
+    for document in parse_pdf_to_documents(
+        pdf_path,
+        beo_type_override=beo_type_override,
+        revision_number_override=revision_number_override,
+    ):
         for candidate in detect_event_candidates(document):
             event = build_event_object(document, candidate)
             if event:
@@ -15,9 +24,20 @@ def extract_events_from_pdf(pdf_path: str) -> list[dict]:
     return events
 
 
-def extract_events_from_text_pages(page_texts: list[str], source_path: str = "<memory>") -> list[dict]:
+def extract_events_from_text_pages(
+    page_texts: list[str],
+    source_path: str = "<memory>",
+    *,
+    beo_type_override: str | None = None,
+    revision_number_override: int | None = None,
+) -> list[dict]:
     events: list[dict] = []
-    for document in parse_text_pages_to_documents(page_texts, source_path):
+    for document in parse_text_pages_to_documents(
+        page_texts,
+        source_path,
+        beo_type_override=beo_type_override,
+        revision_number_override=revision_number_override,
+    ):
         for candidate in detect_event_candidates(document):
             event = build_event_object(document, candidate)
             if event:

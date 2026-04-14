@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -154,6 +155,7 @@ def _normalize_event_for_ops(event: dict[str, Any], *, source_file: str | None =
 def _normalize_standard_event(event: dict[str, Any], *, source_file: str | None = None) -> dict[str, Any]:
     normalized = dict(event)
     normalized["status"] = DEFAULT_EVENT_STATUS
+    normalized["quote"] = event.get("quote")
     normalized["date"] = _normalize_date(event.get("date"))
 
     service = dict(event.get("service") or {})
@@ -169,13 +171,16 @@ def _normalize_standard_event(event: dict[str, Any], *, source_file: str | None 
     source_trace.setdefault("document_id", event.get("event_order"))
     source_trace.setdefault("file_name", Path(source_file).name if source_file else None)
     normalized["source_trace"] = source_trace
+    normalized["identity"] = _build_identity(normalized)
+    normalized["revision_context"] = _build_revision_context(normalized, source_file=source_file)
     return normalized
 
 
 def _normalize_legacy_event(event: dict[str, Any], *, source_file: str | None = None) -> dict[str, Any]:
     raw_details = event.get("details", {}) if isinstance(event.get("details"), dict) else {}
-    return {
+    normalized = {
         "event_order": str(event.get("event_order") or ""),
+        "quote": event.get("quote"),
         "status": DEFAULT_EVENT_STATUS,
         "date": _normalize_date(event.get("date")),
         "organization": event.get("organization"),
@@ -219,6 +224,9 @@ def _normalize_legacy_event(event: dict[str, Any], *, source_file: str | None = 
             "file_name": Path(source_file).name if source_file else None,
         },
     }
+    normalized["identity"] = _build_identity(normalized)
+    normalized["revision_context"] = _build_revision_context(normalized, source_file=source_file)
+    return normalized
 
 
 def _normalize_date(value: Any) -> str | None:
@@ -243,6 +251,69 @@ def _normalize_time(value: Any) -> str | None:
         except ValueError:
             continue
     return text
+
+
+def _build_identity(event: dict[str, Any]) -> dict[str, str | None]:
+    service = event.get("service", {}) if isinstance(event.get("service"), dict) else {}
+    time_data = service.get("time", {}) if isinstance(service.get("time"), dict) else {}
+    event_order = str(event.get("event_order") or "").strip()
+    quote = str(event.get("quote") or "").strip()
+    normalized_date = _normalize_token(event.get("date"))
+    normalized_start = _normalize_token(time_data.get("start"))
+    normalized_room = _normalize_token(service.get("room"))
+    normalized_function = _normalize_token(service.get("function"))
+
+    family_key = "|".join(part for part in [quote, event_order, normalized_date] if part) or None
+    instance_key = "|".join(
+        [
+            quote,
+            event_order,
+            normalized_date,
+            normalized_start,
+            normalized_room,
+            normalized_function,
+        ]
+    )
+    return {
+        "event_family_key": family_key,
+        "event_instance_key": instance_key,
+    }
+
+
+def _build_revision_context(event: dict[str, Any], *, source_file: str | None = None) -> dict[str, Any]:
+    beo = event.get("beo", {}) if isinstance(event.get("beo"), dict) else {}
+    beo_type = str(beo.get("type") or "original").strip().lower()
+    revision_number = _coerce_int(beo.get("revision_number"))
+    file_name = Path(source_file).name if source_file else None
+    document_version_key = "|".join(
+        [
+            str(event.get("event_order") or "").strip(),
+            beo_type,
+            str(revision_number),
+            file_name or "",
+        ]
+    )
+    return {
+        "beo_type": beo_type,
+        "revision_number": revision_number,
+        "is_revision": beo_type != "original" or revision_number > 0,
+        "document_version_key": document_version_key,
+        "revision_source": "pdf" if file_name else "unknown",
+        "supersedes_strategy": "latest_revision_wins_per_event_instance",
+    }
+
+
+def _normalize_token(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    text = re.sub(r"\s+", " ", text)
+    return text
+
+
+def _coerce_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _decode_json_body(raw_body: str) -> Any:

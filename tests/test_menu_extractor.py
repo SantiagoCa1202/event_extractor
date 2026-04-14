@@ -1,9 +1,17 @@
 import unittest
 
 from beo_pipeline.menu_extractor import derive_menu_style, extract_menu_sections
+from beo_pipeline.menu_normalizer import normalize_item_line
 
 
 class MenuExtractorTests(unittest.TestCase):
+    def test_displayed_priced_item_extracts_quantity_and_strips_service_prefix(self) -> None:
+        items = normalize_item_line("(650) (Displayed) Pimento Cheese & Pickled Shrimp Bruschetta Crostini @ $9.9 Each")
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].name, "Pimento Cheese & Pickled Shrimp Bruschetta Crostini")
+        self.assertEqual(items[0].quantity, 650)
+        self.assertEqual(items[0].unit, "each")
+
     def test_extracts_display_and_subitems(self) -> None:
         raw = "\n".join(
             [

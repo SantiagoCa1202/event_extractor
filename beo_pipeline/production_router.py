@@ -73,6 +73,7 @@ HOT_ITEM_RULES = {
     "roast lamb loin": "exact_item_rule",
     "macaroni & cheese bites": "exact_item_rule",
     "cheesesteak spring rolls": "exact_item_rule",
+    "pimento cheese & pickled shrimp bruschetta crostini": "exact_item_rule",
     "self-serve chicken wings": "exact_item_rule",
     "bbq": "exact_item_rule",
     "korean": "exact_item_rule",

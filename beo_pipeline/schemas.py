@@ -14,6 +14,7 @@ class ParsedPage:
 class BeoDocument:
     source_path: str
     event_order: str
+    quote: str | None
     day: str | None
     date: str | None
     organization: str | None

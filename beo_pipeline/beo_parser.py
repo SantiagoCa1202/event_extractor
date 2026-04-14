@@ -11,6 +11,7 @@ from .schemas import BeoDocument, ParsedPage
 
 
 EVENT_ORDER_RE = re.compile(r"Event Order\s*#\s*:?\s*(\d+)", re.IGNORECASE)
+QUOTE_RE = re.compile(r"Quote\s*#\s*:?\s*(.+)", re.IGNORECASE)
 DATE_RE = re.compile(
     r"FUNCTION DAY/DATE:\s*([A-Za-z]+),\s+([A-Za-z]+\s+\d{1,2},\s+\d{4})",
     re.IGNORECASE,
@@ -23,7 +24,7 @@ def infer_beo_type(source_path: str) -> tuple[str, int]:
     if "popup" in name or "pop-up" in name:
         revision = _extract_revision_number(name)
         return "popup", revision
-    if "revision" in name or "revisions" in name:
+    if "revision" in name or "revisions" in name or "revised" in name:
         revision = _extract_revision_number(name)
         return "revision", revision
     return "original", 0
@@ -43,8 +44,18 @@ def extract_pdf_pages(pdf_path: str) -> list[ParsedPage]:
     return pages
 
 
-def group_pages_into_documents(pages: list[ParsedPage], source_path: str) -> list[BeoDocument]:
+def group_pages_into_documents(
+    pages: list[ParsedPage],
+    source_path: str,
+    *,
+    beo_type_override: str | None = None,
+    revision_number_override: int | None = None,
+) -> list[BeoDocument]:
     beo_type, revision_number = infer_beo_type(source_path)
+    if beo_type_override:
+        beo_type = beo_type_override
+    if revision_number_override is not None:
+        revision_number = revision_number_override
     documents: list[BeoDocument] = []
     current_pages: list[ParsedPage] = []
     current_order: str | None = None
@@ -75,11 +86,13 @@ def _build_document(
     revision_number: int,
 ) -> BeoDocument:
     full_text = "\n".join(page.text for page in pages if page.text)
+    quote_match = QUOTE_RE.search(full_text)
     date_match = DATE_RE.search(full_text)
     org_match = ORG_RE.search(full_text)
     return BeoDocument(
         source_path=source_path,
         event_order=event_order or "",
+        quote=quote_match.group(1).strip() if quote_match else None,
         day=date_match.group(1) if date_match else None,
         date=date_match.group(2) if date_match else None,
         organization=org_match.group(1).strip() if org_match else None,
@@ -89,10 +102,31 @@ def _build_document(
     )
 
 
-def parse_pdf_to_documents(pdf_path: str) -> list[BeoDocument]:
-    return group_pages_into_documents(extract_pdf_pages(pdf_path), pdf_path)
+def parse_pdf_to_documents(
+    pdf_path: str,
+    *,
+    beo_type_override: str | None = None,
+    revision_number_override: int | None = None,
+) -> list[BeoDocument]:
+    return group_pages_into_documents(
+        extract_pdf_pages(pdf_path),
+        pdf_path,
+        beo_type_override=beo_type_override,
+        revision_number_override=revision_number_override,
+    )
 
 
-def parse_text_pages_to_documents(page_texts: list[str], source_path: str = "<memory>") -> list[BeoDocument]:
+def parse_text_pages_to_documents(
+    page_texts: list[str],
+    source_path: str = "<memory>",
+    *,
+    beo_type_override: str | None = None,
+    revision_number_override: int | None = None,
+) -> list[BeoDocument]:
     pages = [ParsedPage(page_number=index + 1, text=text) for index, text in enumerate(page_texts)]
-    return group_pages_into_documents(pages, source_path)
+    return group_pages_into_documents(
+        pages,
+        source_path,
+        beo_type_override=beo_type_override,
+        revision_number_override=revision_number_override,
+    )

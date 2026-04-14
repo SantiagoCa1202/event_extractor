@@ -12,7 +12,6 @@ LEADING_QTY_RE = re.compile(r"^\((\d+)\)\s+(.+)$")
 
 def normalize_item_line(line: str) -> list[MenuItem]:
     cleaned = " ".join((line or "").replace("•", " ").replace("â€¢", " ").replace("**", " ").split()).strip(" -")
-    cleaned = _strip_service_prefix(cleaned)
     if not cleaned:
         return []
 
@@ -25,6 +24,7 @@ def normalize_item_line(line: str) -> list[MenuItem]:
         quantity = int(qty_match.group(1))
         cleaned = qty_match.group(2).strip()
 
+    cleaned = _strip_service_prefix(cleaned)
     if "per dozen" in cleaned.lower():
         unit = "dozen"
     elif "per gallon" in cleaned.lower():
@@ -71,6 +71,7 @@ def _should_keep_whole(value: str) -> bool:
         "macaroni & cheese bites",
         "badass bobs pretzels with whole grain mustard",
         "hazel nut crunch cake & brule cheesecake",
+        "pimento cheese & pickled shrimp bruschetta crostini",
     )
     if any(phrase in lower for phrase in preserve_whole_phrases):
         return True

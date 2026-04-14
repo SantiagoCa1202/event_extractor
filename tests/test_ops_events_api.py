@@ -10,6 +10,7 @@ from ops_events_api import build_ops_import_payload, upload_events_to_ops
 
 STANDARD_EVENT = {
     "event_order": "528954",
+    "quote": "M-TEST123",
     "date": "April 07, 2026",
     "organization": "Siemens Healthineers",
     "beo": {
@@ -90,6 +91,19 @@ class OpsEventsApiTests(unittest.TestCase):
         self.assertEqual(event["source_trace"]["generator"], "external-beo")
         self.assertEqual(event["source_trace"]["document_id"], "528954")
         self.assertEqual(event["source_trace"]["file_name"], "sample.pdf")
+        self.assertEqual(event["quote"], "M-TEST123")
+        self.assertEqual(event["identity"]["event_family_key"], "M-TEST123|528954|2026-04-07")
+        self.assertEqual(
+            event["identity"]["event_instance_key"],
+            "M-TEST123|528954|2026-04-07|12:00|executive boardroom|meeting",
+        )
+        self.assertEqual(event["revision_context"]["beo_type"], "original")
+        self.assertEqual(event["revision_context"]["revision_number"], 0)
+        self.assertFalse(event["revision_context"]["is_revision"])
+        self.assertEqual(
+            event["revision_context"]["document_version_key"],
+            "528954|original|0|sample.pdf",
+        )
 
     @patch.dict(
         os.environ,
@@ -117,6 +131,10 @@ class OpsEventsApiTests(unittest.TestCase):
         self.assertEqual(req.get_header("Authorization"), "Bearer secret-token")
         self.assertEqual(body["meta"]["job_id"], "job-456")
         self.assertEqual(body["events"][0]["service"]["time"]["start"], "12:00")
+        self.assertEqual(
+            body["events"][0]["identity"]["event_instance_key"],
+            "M-TEST123|528954|2026-04-07|12:00|executive boardroom|meeting",
+        )
 
     @patch.dict(
         os.environ,

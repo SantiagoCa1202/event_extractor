@@ -42,6 +42,7 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
 
     event = {
         "event_order": document.event_order,
+        "quote": document.quote,
         "date": document.date,
         "organization": document.organization,
         "beo": {
