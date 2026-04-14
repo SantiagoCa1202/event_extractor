@@ -11,7 +11,8 @@ LEADING_QTY_RE = re.compile(r"^\((\d+)\)\s+(.+)$")
 
 
 def normalize_item_line(line: str) -> list[MenuItem]:
-    cleaned = " ".join((line or "").replace("•", " ").split()).strip(" -")
+    cleaned = " ".join((line or "").replace("•", " ").replace("â€¢", " ").replace("**", " ").split()).strip(" -")
+    cleaned = _strip_service_prefix(cleaned)
     if not cleaned:
         return []
 
@@ -32,6 +33,8 @@ def normalize_item_line(line: str) -> list[MenuItem]:
         unit = "each"
 
     no_price = PRICE_SUFFIX_RE.sub("", cleaned).strip()
+    if no_price.lower() == "caluiflower":
+        no_price = "Cauliflower"
     if "charged on consumption" in no_price.lower():
         notes = "Charged on consumption"
         no_price = re.sub(r"(?i)charged on consumption", "", no_price).strip(", ")
@@ -62,12 +65,43 @@ def _normalize_for_fingerprint(value: str) -> str:
 
 def _should_keep_whole(value: str) -> bool:
     lower = value.lower()
-    guarded_tokens = (" with ", " on table", " offered ", " preset ", " choice of ", "types at", " sandwich - ")
+    preserve_whole_phrases = (
+        "garlic & chili broccolini",
+        "creamy mac & cheese",
+        "macaroni & cheese bites",
+        "badass bobs pretzels with whole grain mustard",
+        "hazel nut crunch cake & brule cheesecake",
+    )
+    if any(phrase in lower for phrase in preserve_whole_phrases):
+        return True
+    guarded_tokens = (
+        " with ",
+        " on table",
+        " offered ",
+        " preset ",
+        " choice of ",
+        "types at",
+        " sandwich - ",
+        "half and half",
+        "served after opening speech",
+    )
     if any(token in lower for token in guarded_tokens):
         return True
     if " - " in lower and any(
         token in lower
-        for token in ("egg patty", "american cheese", "cheddar cheese", "smoked ham", "smoked bacon", "turkey sausage", "pork sage sausage")
+        for token in (
+            "egg patty",
+            "american cheese",
+            "cheddar cheese",
+            "smoked ham",
+            "smoked bacon",
+            "turkey sausage",
+            "pork sage sausage",
+        )
     ):
         return True
     return False
+
+
+def _strip_service_prefix(value: str) -> str:
+    return re.sub(r"^\((passed|displayed)\)\s*", "", value, flags=re.IGNORECASE).strip()

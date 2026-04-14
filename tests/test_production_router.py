@@ -121,7 +121,8 @@ class ProductionRouterTests(unittest.TestCase):
                 "service_role": "buffet",
                 "course_type": "other",
                 "items": [
-                    {"name": "Spring Mix With Cherry Tomato"},
+                    {"name": "Spring Mix"},
+                    {"name": "Cherry Tomato"},
                     {"name": "Cucumber"},
                     {"name": "Shredded Carrot"},
                     {"name": "Shredded Cheddar"},
@@ -133,7 +134,8 @@ class ProductionRouterTests(unittest.TestCase):
         ]
         annotated = annotate_menu_sections_with_production(sections)
         items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
-        self.assertEqual(items["Spring Mix With Cherry Tomato"], "cold_kitchen")
+        self.assertEqual(items["Spring Mix"], "cold_kitchen")
+        self.assertEqual(items["Cherry Tomato"], "cold_kitchen")
         self.assertEqual(items["Cucumber"], "cold_kitchen")
         self.assertEqual(items["Shredded Carrot"], "cold_kitchen")
         self.assertEqual(items["Shredded Cheddar"], "cold_kitchen")
@@ -243,6 +245,47 @@ class ProductionRouterTests(unittest.TestCase):
         items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
         self.assertEqual(items["Assorted Pastries"], "cold_kitchen")
         self.assertEqual(items["Assorted Whole Fruit"], "cold_kitchen")
+
+    def test_routes_consolidated_plated_choice_sections(self) -> None:
+        sections = [
+            {
+                "title": "Preset Salad Choice",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "salad",
+                "items": [
+                    {
+                        "name": "Baby Spinach Salad, Frisee, Strawberries, Goat Cheese, Candied Pecans, Strawberry Champagne Vinaigrette",
+                    }
+                ],
+            },
+            {
+                "title": "Entree Choice",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "entree",
+                "items": [
+                    {
+                        "name": "Beef Short Ribs and Seared Scallops\nStarch Choice: Whipped Potatoes\nVegetable Choice: Brocolini",
+                    }
+                ],
+            },
+            {
+                "title": "Dessert Choice",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "dessert",
+                "items": [
+                    {
+                        "name": "Hazel Nut Crunch Cake & Brule Cheesecake",
+                    }
+                ],
+            },
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        self.assertEqual(annotated[0]["items"][0]["production_area"]["temperature_zone"], "cold_kitchen")
+        self.assertEqual(annotated[1]["items"][0]["production_area"]["temperature_zone"], "hot_kitchen")
+        self.assertEqual(annotated[2]["items"][0]["production_area"]["temperature_zone"], "cold_kitchen")
 
     def test_routes_breakfast_burritos_to_hot(self) -> None:
         sections = [
@@ -507,6 +550,215 @@ class ProductionRouterTests(unittest.TestCase):
         self.assertEqual(salad_items["Radish"], "cold_kitchen")
         self.assertEqual(salad_items["Balsamic Vinaigrette"], "cold_kitchen")
         self.assertEqual(dessert_item["production_area"]["temperature_zone"], "cold_kitchen")
+
+    def test_routes_manual_hot_and_cold_assignments_from_rules_file(self) -> None:
+        sections = [
+            {
+                "title": "Items",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Garlic & Chili Broccolini"},
+                    {"name": "Creamy Mac & Cheese"},
+                    {"name": "Pico de Gallo"},
+                    {"name": "Queen City Pimento Cheese"},
+                    {"name": "Stuffed Mushrooms"},
+                    {"name": "Bacon Wrapped Scallops"},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(items["Garlic & Chili Broccolini"], "hot_kitchen")
+        self.assertEqual(items["Creamy Mac & Cheese"], "hot_kitchen")
+        self.assertEqual(items["Pico de Gallo"], "cold_kitchen")
+        self.assertEqual(items["Queen City Pimento Cheese"], "cold_kitchen")
+        self.assertEqual(items["Stuffed Mushrooms"], "hot_kitchen")
+        self.assertEqual(items["Bacon Wrapped Scallops"], "hot_kitchen")
+
+    def test_routes_new_cold_items_from_manual_rules(self) -> None:
+        sections = [
+            {
+                "title": "Items",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Fresh Whole Fruit"},
+                    {"name": "Queen City Pimento Cheese with Butter Cracker"},
+                    {"name": "Rold Gold Mini Pretzel"},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(items["Fresh Whole Fruit"], "cold_kitchen")
+        self.assertEqual(items["Queen City Pimento Cheese with Butter Cracker"], "cold_kitchen")
+        self.assertEqual(items["Rold Gold Mini Pretzel"], "cold_kitchen")
+
+    def test_routes_carolina_bbq_buffet_items(self) -> None:
+        sections = [
+            {
+                "title": "Carolina BBQ Buffet",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [{"name": "Sweet Rolls with Butter"}],
+            },
+            {
+                "title": "Greens",
+                "type": "cold_items",
+                "service_role": "buffet",
+                "course_type": "salad",
+                "items": [
+                    {"name": "Spring Mix"},
+                    {"name": "Cherry Tomato"},
+                    {"name": "Cucumber"},
+                    {"name": "Shredded Carrot"},
+                    {"name": "Cheddar"},
+                    {"name": "Black Olives"},
+                    {"name": "Croutons"},
+                    {"name": "Buttermilk Ranch Dressing"},
+                    {"name": "White Balsamic Dressing"},
+                ],
+            },
+            {
+                "title": "Cold",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [{"name": "Coleslaw"}],
+            },
+            {
+                "title": "Choice of Two Proteins:",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "North Carolina Smoked Pulled Pork"},
+                    {"name": "Smoked Brisket"},
+                    {"name": "BBQ Rub Shrimp"},
+                ],
+            },
+            {
+                "title": "Sides",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Creamy Mac & Cheese"},
+                    {"name": "BBQ Baked Beans"},
+                ],
+            },
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        greens = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[1]["items"]}
+        proteins = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[3]["items"]}
+        sides = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[4]["items"]}
+        self.assertEqual(annotated[0]["items"][0]["production_area"]["temperature_zone"], "hot_kitchen")
+        self.assertEqual(greens["Spring Mix"], "cold_kitchen")
+        self.assertEqual(greens["Buttermilk Ranch Dressing"], "cold_kitchen")
+        self.assertEqual(annotated[2]["items"][0]["production_area"]["temperature_zone"], "cold_kitchen")
+        self.assertEqual(proteins["North Carolina Smoked Pulled Pork"], "hot_kitchen")
+        self.assertEqual(proteins["Smoked Brisket"], "hot_kitchen")
+        self.assertEqual(proteins["BBQ Rub Shrimp"], "hot_kitchen")
+        self.assertEqual(sides["Creamy Mac & Cheese"], "hot_kitchen")
+        self.assertEqual(sides["BBQ Baked Beans"], "hot_kitchen")
+
+    def test_routes_queens_table_items(self) -> None:
+        sections = [
+            {
+                "title": "The Queens Table",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [{"name": "Assorted Rolls with Butter"}],
+            },
+            {
+                "title": "Greens",
+                "type": "cold_items",
+                "service_role": "buffet",
+                "course_type": "salad",
+                "items": [
+                    {"name": "Baby Spinach"},
+                    {"name": "Cherry Tomato"},
+                    {"name": "Cucumber"},
+                    {"name": "Shredded Carrot"},
+                    {"name": "Shredded Cheddar"},
+                    {"name": "Black Olives"},
+                    {"name": "Buttermilk Ranch"},
+                    {"name": "White Balsamic Dressing"},
+                ],
+            },
+            {
+                "title": "Choice of Two Proteins:",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Steak Medallions with Red Wine Reduction,"},
+                    {"name": "Seared Salmon with a Cajun Cream Sauce"},
+                ],
+            },
+            {
+                "title": "Sides",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [{"name": "Cauliflower"}],
+            },
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        greens = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[1]["items"]}
+        proteins = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[2]["items"]}
+        self.assertEqual(annotated[0]["items"][0]["production_area"]["temperature_zone"], "hot_kitchen")
+        self.assertEqual(greens["Baby Spinach"], "cold_kitchen")
+        self.assertEqual(greens["White Balsamic Dressing"], "cold_kitchen")
+        self.assertEqual(proteins["Steak Medallions with Red Wine Reduction,"], "hot_kitchen")
+        self.assertEqual(proteins["Seared Salmon with a Cajun Cream Sauce"], "hot_kitchen")
+        self.assertEqual(annotated[3]["items"][0]["production_area"]["temperature_zone"], "hot_kitchen")
+
+    def test_routes_passed_hot_items_even_with_literal_prefix(self) -> None:
+        sections = [
+            {
+                "title": "Passed",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "(Passed) Stuffed Mushrooms"},
+                    {"name": "(Passed) Shrimp Cocktail (4 pieces of shrimp per order)"},
+                    {"name": "(Passed) Beef Filet"},
+                    {"name": "(Passed) Bacon Wrapped Scallops"},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(items["(Passed) Stuffed Mushrooms"], "hot_kitchen")
+        self.assertEqual(items["(Passed) Shrimp Cocktail (4 pieces of shrimp per order)"], "hot_kitchen")
+        self.assertEqual(items["(Passed) Beef Filet"], "hot_kitchen")
+        self.assertEqual(items["(Passed) Bacon Wrapped Scallops"], "hot_kitchen")
+
+    def test_ignored_manual_items_do_not_appear_in_operational_split(self) -> None:
+        sections = [
+            {
+                "title": "Items",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Soft Drinks and Bottled Water"},
+                    {"name": "Complimentary per contract"},
+                    {"name": "Pico de Gallo"},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        names = [item["name"] for item in annotated[0]["items"]]
+        self.assertEqual(names, ["Pico de Gallo"])
+        self.assertEqual(annotated[0]["operational_split"]["cold_kitchen_items"], ["Pico de Gallo"])
 
 
 if __name__ == "__main__":

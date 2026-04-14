@@ -434,7 +434,7 @@ generate_waste_food_sheet(events, filename=f"ready_to_print/waste_food/{nombre_s
  
 ## CREATE JSON
 output_json_path = f"ready_to_print/json/{nombre_sin_ext}_events.json"
-save_json(events, output_json_path)
+save_json(events, output_json_path, source_file=pdf_path)
 print("✅ JSON guardado en:", output_json_path)
 
 # ##//** SUBRAYAR Y GUARDAR NUEVO PDF 

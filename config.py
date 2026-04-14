@@ -3,3 +3,7 @@ import os
 
 DEFAULT_TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 TESSERACT_CMD = os.getenv("TESSERACT_CMD", DEFAULT_TESSERACT_CMD)
+OPS_EVENTS_API_BASE_URL = os.getenv("OPS_EVENTS_API_BASE_URL", "").strip()
+OPS_EVENTS_API_TOKEN = os.getenv("OPS_EVENTS_API_TOKEN", "").strip()
+OPS_EVENTS_API_ENABLED = os.getenv("OPS_EVENTS_API_ENABLED", "true").strip()
+OPS_EVENTS_API_TIMEOUT_SECONDS = os.getenv("OPS_EVENTS_API_TIMEOUT_SECONDS", "30").strip()

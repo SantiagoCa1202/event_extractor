@@ -258,11 +258,72 @@ class MenuExtractorTests(unittest.TestCase):
             ["Steel Cut Oatmeal", "Golden Raises", "Sliced Almonds", "Brown Sugar"],
         )
 
+    def test_consolidates_plated_choice_sections(self) -> None:
+        raw = "\n".join(
+            [
+                "6:00 PM Plated Dinner Carolina A & C",
+                "Plated Dinner",
+                "Preset Salad Choice: Baby Spinach Salad",
+                "Frisee, Strawberries, Goat Cheese, Candied Pecans, Strawberry Champagne Vinaigrette,",
+                "Entree Choice:Beef Short Ribs and Seared Scallops",
+                "Starch Choice: Whipped Potatoes",
+                "Vegetable Choice: Brocolini",
+                "Dessert Choice: Hazel Nut Crunch Cake & Brule Cheesecake",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+
+        salad_section = next(section for section in sections if section.title == "Preset Salad Choice")
+        self.assertEqual(
+            [item.name for item in salad_section.items],
+            ["Baby Spinach Salad, Frisee, Strawberries, Goat Cheese, Candied Pecans, Strawberry Champagne Vinaigrette"],
+        )
+
+        entree_section = next(section for section in sections if section.title == "Entree Choice")
+        self.assertEqual(
+            [item.name for item in entree_section.items],
+            ["Beef Short Ribs and Seared Scallops\nStarch Choice: Whipped Potatoes\nVegetable Choice: Brocolini"],
+        )
+
+        dessert_section = next(section for section in sections if section.title == "Dessert Choice")
+        self.assertEqual(
+            [item.name for item in dessert_section.items],
+            ["Hazel Nut Crunch Cake & Brule Cheesecake"],
+        )
+
+    def test_welcome_to_clt_keeps_section_and_items(self) -> None:
+        raw = "\n".join(
+            [
+                "Welcome to CLT - Meck 1&2",
+                "Locally Sourced Krispy Kreme Original Glaze Donuts",
+                "Badass Bobs Pretzels with Whole Grain Mustard",
+                "Queen City Pimento Cheese with Butter Cracker",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        self.assertEqual(sections[0].title, "Welcome to CLT")
+        self.assertEqual(
+            [item.name for item in sections[0].items],
+            [
+                "Locally Sourced Krispy Kreme Original Glaze Donuts",
+                "Badass Bobs Pretzels with Whole Grain Mustard",
+                "Queen City Pimento Cheese with Butter Cracker",
+            ],
+        )
+
+    def test_assorted_bags_of_becomes_snack_title_with_items(self) -> None:
+        raw = "Assorted Bags of Chips, Pretzels, and Popcorn"
+        sections = extract_menu_sections(raw)
+        self.assertEqual(len(sections), 1)
+        self.assertEqual(sections[0].title, "Assorted Bags of")
+        self.assertEqual(sections[0].type, "snack_items")
+        self.assertEqual([item.name for item in sections[0].items], ["Chips", "Pretzels", "Popcorn"])
+
     def test_greens_and_toppings_becomes_section_and_rejoins_white_balsamic(self) -> None:
         raw = "\n".join(
             [
                 "12:00 PM Lunch Buffet",
-                "Greens & Toppings: Spring Mix With Cherry Tomato, Cucumber, Shredded Carrot, Shredded Cheddar, Black Olives, Buttermilk Ranch, White",
+                "Greens & Toppings: Spring Mix With Cherry Tomato, Cucumber, Shredded Carrot, Shredded Cheddar, Black Olives, Croutons with Buttermilk Ranch, White",
                 "Balsamic Dressing",
             ]
         )
@@ -272,12 +333,14 @@ class MenuExtractorTests(unittest.TestCase):
         self.assertEqual(section.title, "Greens & Toppings")
         self.assertEqual(section.type, "cold_items")
         names = [item.name for item in section.items]
-        self.assertIn("Spring Mix With Cherry Tomato", names)
+        self.assertIn("Spring Mix", names)
+        self.assertIn("Cherry Tomato", names)
         self.assertIn("Cucumber", names)
         self.assertIn("Shredded Carrot", names)
         self.assertIn("Shredded Cheddar", names)
         self.assertIn("Black Olives", names)
-        self.assertIn("Buttermilk Ranch", names)
+        self.assertIn("Croutons", names)
+        self.assertIn("Buttermilk Ranch Dressing", names)
         self.assertIn("White Balsamic Dressing", names)
 
     def test_menu_style_title_does_not_absorb_real_subsections(self) -> None:
@@ -305,6 +368,108 @@ class MenuExtractorTests(unittest.TestCase):
         item_section = next(section for section in sections if section.title == "Items")
         item_names = [item.name for item in item_section.items]
         self.assertIn("Assorted Rolls with Butter", item_names)
+
+    def test_carolina_bbq_buffet_breaks_into_expected_sections(self) -> None:
+        raw = "\n".join(
+            [
+                "12:00 PM Lunch Buffet",
+                "Carolina BBQ Buffet",
+                "Tsweet Rolls with Butter",
+                "Greens: Spring Mix with Cherry Tomato, Cucumber, Shredded Carrot, Cheddar, Black Olives, Croutons with Buttermilk Ranch and White",
+                "Balsamic Dressing",
+                "Coleslaw",
+                "Choice of Two Proteins:",
+                "North Carolina Smoked Pulled Pork",
+                "Smoked Brisket",
+                "BBQ Rub Shrimp",
+                "Condiments: East BBQ, Sweet BBQ, Pickle Chips",
+                "Sides: Creamy Mac & Cheese",
+                "BBQ Baked Beans",
+                "Dessert: Assorted Sliced Cake",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        self.assertEqual(derive_menu_style(raw, sections), "Carolina BBQ Buffet")
+
+        item_section = next(section for section in sections if section.title == "Carolina BBQ Buffet")
+        self.assertEqual([item.name for item in item_section.items], ["Sweet Rolls with Butter"])
+
+        greens_section = next(section for section in sections if section.title == "Greens")
+        self.assertEqual(
+            [item.name for item in greens_section.items],
+            [
+                "Spring Mix",
+                "Cherry Tomato",
+                "Cucumber",
+                "Shredded Carrot",
+                "Cheddar",
+                "Black Olives",
+                "Croutons",
+                "Buttermilk Ranch Dressing",
+                "White Balsamic Dressing",
+            ],
+        )
+
+        cold_section = next(section for section in sections if section.title == "Cold")
+        self.assertEqual([item.name for item in cold_section.items], ["Coleslaw"])
+
+        protein_section = next(section for section in sections if section.title == "Choice of Two Proteins:")
+        self.assertEqual(
+            [item.name for item in protein_section.items],
+            ["North Carolina Smoked Pulled Pork", "Smoked Brisket", "BBQ Rub Shrimp"],
+        )
+
+        sides_section = next(section for section in sections if section.title == "Sides")
+        self.assertEqual([item.name for item in sides_section.items], ["Creamy Mac & Cheese", "BBQ Baked Beans"])
+
+    def test_queens_table_breaks_into_expected_sections(self) -> None:
+        raw = "\n".join(
+            [
+                "Lunch Buffet Mecklenburg 3",
+                "The Queens Table:",
+                "Assorted Rolls with Butter",
+                "Baby Spinach With Cherry Tomato, Cucumber, Shredded Carrot, Shredded Cheddar, Black Olives, Buttermilk Ranch, White Balsamic Dressing",
+                "Choice of Two Proteins:",
+                "Steak Medallions with Red Wine Reduction,",
+                "Seared Salmon with a Cajun Cream Sauce",
+                "Sides: Caluiflower",
+                "Dessert: Assorted Sliced Cake",
+                "Tractor Iced Tea & Starbucks Coffee",
+                "(1) Chef Attendant (One Per 75 Guests) @ $250.00 Each",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        self.assertEqual(derive_menu_style(raw, sections), "The Queens Table")
+
+        bread_section = next(section for section in sections if section.title == "The Queens Table")
+        self.assertEqual([item.name for item in bread_section.items], ["Assorted Rolls with Butter"])
+
+        greens_section = next(section for section in sections if section.title == "Greens")
+        self.assertEqual(
+            [item.name for item in greens_section.items],
+            [
+                "Baby Spinach",
+                "Cherry Tomato",
+                "Cucumber",
+                "Shredded Carrot",
+                "Shredded Cheddar",
+                "Black Olives",
+                "Buttermilk Ranch",
+                "White Balsamic Dressing",
+            ],
+        )
+
+        proteins_section = next(section for section in sections if section.title == "Choice of Two Proteins:")
+        self.assertEqual(
+            [item.name for item in proteins_section.items],
+            ["Steak Medallions with Red Wine Reduction,", "Seared Salmon with a Cajun Cream Sauce"],
+        )
+
+        sides_section = next(section for section in sections if section.title == "Sides")
+        self.assertEqual([item.name for item in sides_section.items], ["Cauliflower"])
+
+        dessert_section = next(section for section in sections if section.title == "Dessert")
+        self.assertEqual([item.name for item in dessert_section.items], ["Assorted Sliced Cake"])
 
     def test_special_plate_counts_become_notes_not_items(self) -> None:
         raw = "\n".join(
@@ -354,6 +519,86 @@ class MenuExtractorTests(unittest.TestCase):
             ["display", "display", "display", "station_items", "station_items", "station_items", "station_items"],
         )
         self.assertTrue(all(not section.items for section in sections))
+
+    def test_filters_contractual_and_service_charge_noise(self) -> None:
+        raw = "\n".join(
+            [
+                "12:00 PM Lunch Buffet Executive Boardroom",
+                "The Queens Table",
+                "Assorted Rolls with Butter",
+                "Guarantees are required 5 Business Days Prior to Event Day.",
+                "Any Room Set Changes Within 24 Hours of the Event Will be Charged $400 Per Incident and/or Room.",
+                "Absolutely No Outside Food & Beverage Allowed Unless Determined at Contract Signing, hotel will assess fees for",
+                "each infraction.",
+                "A service charge of 13% of the total food and beverage revenue will be added, which will be provided to wait staff",
+                "administrative fee is retained by the Hotel, is not a tip, gratuity or service charge for any employee and is not the",
+                "property of the employee(s) providing service to you.",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        names = [item.name for section in sections for item in section.items]
+        self.assertEqual(names, ["Assorted Rolls with Butter"])
+
+    def test_filters_offsite_group_logistics_noise(self) -> None:
+        raw = "\n".join(
+            [
+                "4:30 PM Reception Lobby",
+                "Group to Visit Tannin & Toast from 4:30PM - 5:45PM",
+                "Group will order drinks & appetizers on own and will settle bill by credit card at event conclusion.",
+                "Group will have one tab for all guests",
+                "Group to go offsite for dinner at McNinch House",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        self.assertEqual(sections, [])
+
+    def test_filters_city_lights_offsite_logistics_noise(self) -> None:
+        raw = "\n".join(
+            [
+                "8:00 PM Reception CCSC",
+                "Group to Visit City Lights from 8:00PM - 12:00AM - Please reserve semi-private space for the group.",
+                "Group will order drinks & appetizers on own and will setlle bill by credit card at event conclusion.",
+                "Group will have one tab for all guests",
+                "Should inclemement weather cause reception to be moved, please reserve a semi-private space at CCSC",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        self.assertEqual(sections, [])
+
+    def test_manual_line_rules_merge_known_split_items(self) -> None:
+        raw = "\n".join(
+            [
+                "12:00 PM Lunch Buffet",
+                "Items",
+                "Garlic",
+                "Chili Broccolini",
+                "Creamy Mac",
+                "Cheese",
+                "(Displayed) Macaroni",
+                "Cheese Bites",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        names = [item.name for section in sections for item in section.items]
+        self.assertIn("Garlic & Chili Broccolini", names)
+        self.assertIn("Creamy Mac & Cheese", names)
+        self.assertIn("Macaroni & Cheese Bites", names)
+
+    def test_passed_items_use_passed_section_and_strip_prefix(self) -> None:
+        raw = "\n".join(
+            [
+                "5:00 PM Reception",
+                "(Passed) Stuffed Mushrooms",
+                "(Passed) Bacon Wrapped Scallops",
+                "Blue Cheese Wellington",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        passed_section = next(section for section in sections if section.title == "Passed")
+        self.assertEqual(
+            [item.name for item in passed_section.items],
+            ["Stuffed Mushrooms", "Bacon Wrapped Scallops", "Blue Cheese Wellington"],
+        )
 
 
 if __name__ == "__main__":

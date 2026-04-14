@@ -100,6 +100,48 @@ U-Shape
         events = extract_events_from_text_pages(pages)
         self.assertEqual(events, [])
 
+    def test_omits_offsite_group_logistics_that_are_not_hotel_food_service(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 708999
+FUNCTION DAY/DATE: Thursday, April 09, 2026
+ORGANIZATION: Maximo Utility Working Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+4:30 PM-5:45 PM Reception Lobby 30
+4:30 PM Reception Lobby
+Group to Visit Tannin & Toast from 4:30PM - 5:45PM
+Group will order drinks & appetizers on own and will settle bill by credit card at event conclusion.
+Group will have one tab for all guests
+Group to go offsite for dinner at McNinch House
+ROOM SETUP 4:30 PM-5:45 PM Reception Lobby
+Cocktail
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(events, [])
+
+    def test_omits_city_lights_offsite_logistics_variant(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 709001
+FUNCTION DAY/DATE: Thursday, April 16, 2026
+ORGANIZATION: Example Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+8:00 PM-12:00 AM Reception CCSC 60
+8:00 PM Reception CCSC
+Group to Visit City Lights from 8:00PM - 12:00AM - Please reserve semi-private space for the group.
+Group will order drinks & appetizers on own and will setlle bill by credit card at event conclusion.
+Group will have one tab for all guests
+Should inclemement weather cause reception to be moved, please reserve a semi-private space at CCSC
+ROOM SETUP 8:00 PM-12:00 AM Reception CCSC
+Cocktail
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(events, [])
+
     def test_builds_buffet_and_break_from_meeting_context(self) -> None:
         pages = [
             """EVENT ORDER Page # 1 of 2

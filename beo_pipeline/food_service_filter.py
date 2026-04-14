@@ -7,6 +7,14 @@ NEGATIVE_PATTERNS = (
     r"no food or beverage required at this time",
     r"no food required",
     r"no beverage required",
+    r"group to visit .+ from \d{1,2}:\d{2}\s*[ap]m",
+    r"group will order drinks .+ on own",
+    r"group will have one tab for all guests",
+    r"group to go off.?site for dinner",
+    r"settle bill by credit card at event conclusion",
+    r"setlle bill by credit card at event conclusion",
+    r"should inclemement weather cause reception to be moved",
+    r"please reserve semi.?private space",
 )
 
 FOOD_SERVICE_TERMS = {
