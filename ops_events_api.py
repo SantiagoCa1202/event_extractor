@@ -10,12 +10,15 @@ from pathlib import Path
 from typing import Any
 from urllib import error, request
 
+import config  # noqa: F401  # Ensures .env files are loaded before reading os.environ.
+
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_SOURCE_SYSTEM = "beo_generator"
 DEFAULT_IMPORT_ENDPOINT = "/api/v1/events/import"
 DEFAULT_TIMEOUT_SECONDS = 30
+DEFAULT_EVENT_STATUS = "on_time"
 
 
 @dataclass(slots=True)
@@ -150,6 +153,7 @@ def _normalize_event_for_ops(event: dict[str, Any], *, source_file: str | None =
 
 def _normalize_standard_event(event: dict[str, Any], *, source_file: str | None = None) -> dict[str, Any]:
     normalized = dict(event)
+    normalized["status"] = DEFAULT_EVENT_STATUS
     normalized["date"] = _normalize_date(event.get("date"))
 
     service = dict(event.get("service") or {})
@@ -172,6 +176,7 @@ def _normalize_legacy_event(event: dict[str, Any], *, source_file: str | None = 
     raw_details = event.get("details", {}) if isinstance(event.get("details"), dict) else {}
     return {
         "event_order": str(event.get("event_order") or ""),
+        "status": DEFAULT_EVENT_STATUS,
         "date": _normalize_date(event.get("date")),
         "organization": event.get("organization"),
         "beo": {

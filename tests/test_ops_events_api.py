@@ -83,6 +83,7 @@ class OpsEventsApiTests(unittest.TestCase):
         self.assertEqual(payload["meta"]["job_id"], "job-123")
         self.assertEqual(payload["meta"]["source_file"], r"C:\imports\sample.pdf")
         event = payload["events"][0]
+        self.assertEqual(event["status"], "on_time")
         self.assertEqual(event["date"], "2026-04-07")
         self.assertEqual(event["service"]["time"]["start"], "12:00")
         self.assertEqual(event["service"]["time"]["end"], "17:00")

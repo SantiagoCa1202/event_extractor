@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 
-SETUP_OFFSET_MINUTES = 40
+SETUP_OFFSET_MINUTES = 30
 PICKUP_FOOD_OFFSET_MINUTES = 50
 CLEAN_UP_OFFSET_MINUTES = 40
 TIME_FORMAT = "%I:%M %p"

@@ -9,7 +9,12 @@ __pycache__/
 .vscode/
 .DS_Store
 node_modules/
-*.env
+.env
+.env.dev
+.env.prod
+.env.local
+!.env.dev.example
+!.env.prod.example
 *.bak
 *.swp
 *.swo
