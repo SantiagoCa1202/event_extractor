@@ -56,6 +56,7 @@ NOISE_PATTERNS = (
     r"^must serve mixed$",
     r"^drinks only$",
     r"^after dinner$",
+    r"^\**\s*\(.+\)\s+.*bar.+move into ballroom$",
 )
 CONTRACTUAL_NOISE_PATTERNS = (
     r"^guarantees are required\b",
@@ -342,11 +343,13 @@ def derive_menu_style(raw_block: str, sections: list[MenuSection]) -> str | None
             return _normalize_menu_style_title(line)
     for section in sections:
         title = section.title.lower()
-        if title not in {"items", "beverages", "sides", "dessert", "passed", "displayed"}:
+        if title not in {"items", "beverages", "sides", "dessert", "passed", "displayed"} and not _is_operational_note_title(
+            section.title
+        ):
             return section.title
     for line in (_clean_line(line) for line in (raw_block or "").splitlines()):
         if line and not _is_noise(line) and not _looks_like_block_header(line):
-            if _looks_like_title(line):
+            if _looks_like_title(line) and not _is_operational_note_title(line):
                 return normalize_title(line)
     return None
 
@@ -529,6 +532,19 @@ def _contains_title_hint(lower: str) -> bool:
 
 def _is_menu_style_only_title(value: str) -> bool:
     return value.strip().rstrip(":").lower() in MENU_STYLE_ONLY_TITLES
+
+
+def _is_operational_note_title(value: str) -> bool:
+    lower = value.strip().rstrip(":").lower()
+    return "bar" in lower and any(
+        phrase in lower
+        for phrase in (
+            "to move into ballroom",
+            "no tequila",
+            "drinks only",
+            "must serve mixed",
+        )
+    )
 
 
 def _normalize_menu_style_title(value: str) -> str:

@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import hashlib
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -160,10 +161,12 @@ def _normalize_standard_event(event: dict[str, Any], *, source_file: str | None 
 
     service = dict(event.get("service") or {})
     time_data = dict(service.get("time") or {})
+    sanitized_room = _sanitize_room(service.get("room"), raw_text=(event.get("details") or {}).get("raw"))
     service["time"] = {
         "start": _normalize_time(time_data.get("start")),
         "end": _normalize_time(time_data.get("end")),
     }
+    service["room"] = sanitized_room
     normalized["service"] = service
 
     source_trace = dict(event.get("source_trace") or {})
@@ -197,7 +200,7 @@ def _normalize_legacy_event(event: dict[str, Any], *, source_file: str | None = 
                 "start": _normalize_time(event.get("time")),
                 "end": None,
             },
-            "room": event.get("room"),
+            "room": _sanitize_room(event.get("room"), raw_text=raw_details.get("raw", "")),
             "gtd": event.get("gtd"),
             "menu_style": event.get("menu_style"),
         },
@@ -264,7 +267,7 @@ def _build_identity(event: dict[str, Any]) -> dict[str, str | None]:
     normalized_function = _normalize_token(service.get("function"))
 
     family_key = "|".join(part for part in [quote, event_order, normalized_date] if part) or None
-    instance_key = "|".join(
+    identity_source = "|".join(
         [
             quote,
             event_order,
@@ -274,6 +277,9 @@ def _build_identity(event: dict[str, Any]) -> dict[str, str | None]:
             normalized_function,
         ]
     )
+    instance_key = f"{event_order}|{hashlib.sha1(identity_source.encode('utf-8')).hexdigest()[:20]}" if event_order else hashlib.sha1(
+        identity_source.encode("utf-8")
+    ).hexdigest()[:20]
     return {
         "event_family_key": family_key,
         "event_instance_key": instance_key,
@@ -307,6 +313,96 @@ def _normalize_token(value: Any) -> str:
     text = str(value or "").strip().lower()
     text = re.sub(r"\s+", " ", text)
     return text
+
+
+def _sanitize_room(value: Any, *, raw_text: str | None = None) -> str | None:
+    room = " ".join(str(value or "").split()).strip()
+    if room and not _looks_like_bad_room(room) and len(room) <= 180:
+        return room
+
+    inferred = _infer_room_from_raw(raw_text or "")
+    if inferred and len(inferred) <= 180:
+        return inferred
+
+    if room:
+        cleaned = _strip_room_noise(room)
+        if cleaned and not _looks_like_bad_room(cleaned) and len(cleaned) <= 180:
+            return cleaned
+    return None
+
+
+def _looks_like_bad_room(value: str) -> bool:
+    lower = value.lower()
+    if len(value) > 180:
+        return True
+    suspicious_markers = [
+        "event order page",
+        "marriott proprietary",
+        "organization:",
+        "function day/date:",
+        "phone:(",
+        "based on ",
+        "choice of ",
+        "dessert:",
+        "tractor iced tea",
+        "starbucks",
+        "assorted ",
+        "scrambled eggs",
+        "roasted ",
+    ]
+    return any(marker in lower for marker in suspicious_markers)
+
+
+def _strip_room_noise(value: str) -> str | None:
+    room = re.split(
+        r"(?i)\b(?:event order page|marriott proprietary|organization:|function day/date:|phone:\(|based on |choice of |dessert:|tractor iced tea|starbucks|assorted )",
+        value,
+        maxsplit=1,
+    )[0]
+    room = " ".join(room.split()).strip(" -")
+    return room or None
+
+
+def _infer_room_from_raw(raw_text: str) -> str | None:
+    lines = [line.strip() for line in str(raw_text or "").splitlines() if line.strip()]
+    if not lines:
+        return None
+    if len(lines) > 1:
+        second_line = lines[1]
+        if " - " in second_line:
+            candidate = second_line.split(" - ", 1)[-1].strip()
+            if candidate:
+                return candidate
+    first_line = lines[0]
+    first_line = re.sub(r"^\d{1,2}:\d{2}\s*[AP]M\s+", "", first_line, flags=re.IGNORECASE).strip()
+    parts = first_line.split()
+    known_functions = [
+        "continental breakfast",
+        "breakfast buffet",
+        "lunch buffet",
+        "dinner buffet",
+        "plated lunch",
+        "plated dinner",
+        "coffee break",
+        "general session",
+        "reception",
+        "breakfast",
+        "lunch",
+        "dinner",
+        "breakout",
+        "break",
+        "meeting",
+        "registration",
+        "office",
+        "storage",
+        "set up",
+    ]
+    lower = first_line.lower()
+    for function_name in known_functions:
+        if lower.startswith(function_name):
+            candidate = first_line[len(function_name) :].strip(" -")
+            return candidate or None
+    return None
 
 
 def _coerce_int(value: Any) -> int:

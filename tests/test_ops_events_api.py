@@ -93,10 +93,8 @@ class OpsEventsApiTests(unittest.TestCase):
         self.assertEqual(event["source_trace"]["file_name"], "sample.pdf")
         self.assertEqual(event["quote"], "M-TEST123")
         self.assertEqual(event["identity"]["event_family_key"], "M-TEST123|528954|2026-04-07")
-        self.assertEqual(
-            event["identity"]["event_instance_key"],
-            "M-TEST123|528954|2026-04-07|12:00|executive boardroom|meeting",
-        )
+        self.assertTrue(event["identity"]["event_instance_key"].startswith("528954|"))
+        self.assertLessEqual(len(event["identity"]["event_instance_key"]), 32)
         self.assertEqual(event["revision_context"]["beo_type"], "original")
         self.assertEqual(event["revision_context"]["revision_number"], 0)
         self.assertFalse(event["revision_context"]["is_revision"])
@@ -131,10 +129,25 @@ class OpsEventsApiTests(unittest.TestCase):
         self.assertEqual(req.get_header("Authorization"), "Bearer secret-token")
         self.assertEqual(body["meta"]["job_id"], "job-456")
         self.assertEqual(body["events"][0]["service"]["time"]["start"], "12:00")
-        self.assertEqual(
-            body["events"][0]["identity"]["event_instance_key"],
-            "M-TEST123|528954|2026-04-07|12:00|executive boardroom|meeting",
-        )
+        self.assertTrue(body["events"][0]["identity"]["event_instance_key"].startswith("528954|"))
+
+    def test_build_payload_sanitizes_bad_room_and_shortens_identity_key(self) -> None:
+        broken_event = {
+            **STANDARD_EVENT,
+            "service": {
+                **STANDARD_EVENT["service"],
+                "room": "Steel Cut Carolina Ballroom 7:00 AM Breakfast Buffet The Uptown Assorted Danish, Croissants, Biscuits "
+                "Strawberry + Apricot Jam Scrambled Eggs Applewood Smoked Thick Cut Bacon Rosemary Roasted Potatoes",
+            },
+            "details": {
+                **STANDARD_EVENT["details"],
+                "raw": "7:00 AM Breakfast Buffet Carolina Ballroom\nThe Uptown\nAssorted Danish, Croissants, Biscuits",
+            },
+        }
+        payload = build_ops_import_payload([broken_event], source_file="broken.pdf")
+        event = payload["events"][0]
+        self.assertEqual(event["service"]["room"], "Carolina Ballroom")
+        self.assertLessEqual(len(event["identity"]["event_instance_key"]), 32)
 
     @patch.dict(
         os.environ,

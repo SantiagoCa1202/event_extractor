@@ -608,6 +608,29 @@ class MenuExtractorTests(unittest.TestCase):
             ["Stuffed Mushrooms", "Bacon Wrapped Scallops", "Blue Cheese Wellington"],
         )
 
+    def test_reception_operational_bar_note_is_not_menu_style(self) -> None:
+        raw = "\n".join(
+            [
+                "10:45 PM Reception Symphony Convention Foyer",
+                "(650) (Displayed) Roast Lamb Loin & Tomato Crostini @ $9.9 Each",
+                "(650) (Displayed) Macaroni & Cheese Bites @ $9.9 Each",
+                "(650) (Displayed) Cheesesteak Spring Rolls @ $9.9 Each",
+                "(650) Self-Serve Chicken Wings @ $6.3 Each",
+                "BBQ, Korean, and Buffalo Sauce on Side",
+                "Ranch & Blue Cheese on Side",
+                "FOOD 5:00 PM-6:15 PM Reception Symphony Convention Foyer",
+                "** (3) BARS TO SERVE LIQUOR ONLY",
+                "** (2) BARS TO SERVE BEER & WINE ONLY",
+                "** NO TEQUILA TO BE SERVED AT BARS",
+                "** CLIENT REQUEST -- NO SHOTS OR STRAIGHT LIQUOR, MUST SERVE MIXED",
+                "DRINKS ONLY",
+                "** (1) BEER & WINE BAR AND (2) LIQUOR ONLY BAR TO MOVE INTO BALLROOM",
+                "AFTER DINNER",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        self.assertIsNone(derive_menu_style(raw, sections))
+
 
 if __name__ == "__main__":
     unittest.main()
