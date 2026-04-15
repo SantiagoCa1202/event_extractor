@@ -32,6 +32,85 @@ KNOWN_FUNCTIONS = [
     "Storage",
     "Office",
 ]
+ROOM_SPECS = [
+    {
+        "canonical": "Executive Boardroom",
+        "aliases": ("Executive Boardroom",),
+        "numbers": set(),
+        "letters": set(),
+        "keywords": set(),
+    },
+    {
+        "canonical": "Cardinal Ballroom",
+        "aliases": ("Cardinal Ballroom",),
+        "numbers": set(),
+        "letters": set(),
+        "keywords": {"foyer"},
+    },
+    {
+        "canonical": "Symphony",
+        "aliases": ("Symphony",),
+        "numbers": {str(value) for value in range(1, 8)},
+        "letters": set(),
+        "keywords": {"convention", "foyer", "ballroom"},
+    },
+    {
+        "canonical": "Carolina",
+        "aliases": ("Carolina",),
+        "numbers": set(),
+        "letters": {"A", "B", "C", "D", "E"},
+        "keywords": {"foyer", "ballroom"},
+    },
+    {
+        "canonical": "Governor's",
+        "aliases": ("Governor's", "Governors"),
+        "numbers": {str(value) for value in range(1, 7)},
+        "letters": set(),
+        "keywords": {"foyer", "ballroom"},
+    },
+    {
+        "canonical": "Mecklenburg",
+        "aliases": ("Mecklenburg",),
+        "numbers": {str(value) for value in range(1, 5)},
+        "letters": set(),
+        "keywords": {"foyer", "ballroom"},
+    },
+    {
+        "canonical": "LM PDR",
+        "aliases": ("LM PDR",),
+        "numbers": set(),
+        "letters": set(),
+        "keywords": set(),
+    },
+    {
+        "canonical": "CJS",
+        "aliases": ("CJS",),
+        "numbers": set(),
+        "letters": set(),
+        "keywords": set(),
+    },
+    {
+        "canonical": "Rooftop",
+        "aliases": ("Rooftop",),
+        "numbers": set(),
+        "letters": set(),
+        "keywords": set(),
+    },
+    {
+        "canonical": "Lobby",
+        "aliases": ("Lobby",),
+        "numbers": set(),
+        "letters": set(),
+        "keywords": set(),
+    },
+    {
+        "canonical": "CCSC",
+        "aliases": ("CCSC",),
+        "numbers": set(),
+        "letters": set(),
+        "keywords": set(),
+    },
+]
 
 
 def detect_event_candidates(document: BeoDocument) -> list[EventCandidate]:
@@ -132,8 +211,7 @@ def _parse_attendance_chunk(chunk: list[str]) -> AttendanceEntry | None:
     body = " ".join([match.group("body"), *chunk[1:]]).strip()
     body = re.sub(r"POST AS:\s*.+", "", body, flags=re.IGNORECASE).strip()
     function_name, remainder = _extract_function_and_room(body, return_remainder=True)
-    gtd = _extract_last_integer(remainder)
-    room = _clean_room(remainder, gtd)
+    room, gtd = _extract_room_and_gtd(remainder)
     return AttendanceEntry(
         start=match.group("start"),
         end=match.group("end"),
@@ -214,12 +292,94 @@ def _extract_last_integer(value: str | None) -> int | None:
     return int(matches[-1])
 
 
-def _clean_room(value: str | None, gtd: int | None) -> str | None:
+def _extract_room_and_gtd(value: str | None) -> tuple[str | None, int | None]:
+    cleaned = _strip_room_value(value)
+    if not cleaned:
+        return None, None
+
+    parsed_room, parsed_gtd = _parse_known_room_and_gtd(cleaned)
+    if parsed_room:
+        return parsed_room, parsed_gtd
+    return _clean_room(cleaned, None), _extract_last_integer(cleaned)
+
+
+def _strip_room_value(value: str | None) -> str | None:
     if not value:
         return None
     room = value
     room = re.sub(r"POST AS:\s*.+", "", room, flags=re.IGNORECASE)
     room = re.sub(r"\$\d[\d,.]*", "", room)
+    room = " ".join(room.split()).strip(" -")
+    return room or None
+
+
+def _parse_known_room_and_gtd(value: str) -> tuple[str | None, int | None]:
+    for spec in ROOM_SPECS:
+        matched_alias = _match_room_alias(value, spec["aliases"])
+        if not matched_alias:
+            continue
+
+        suffix = value[len(matched_alias) :].strip()
+        room_parts = [spec["canonical"]]
+        numeric_columns: list[int] = []
+        previous_was_room_token = False
+
+        for token in suffix.split():
+            normalized = token.strip(",;").upper()
+            lower_token = normalized.lower()
+            if token == "&" and previous_was_room_token:
+                room_parts.append("&")
+                previous_was_room_token = False
+                continue
+            if normalized in spec["numbers"]:
+                room_parts.append(normalized)
+                previous_was_room_token = True
+                continue
+            if normalized in spec["letters"]:
+                room_parts.append(normalized)
+                previous_was_room_token = True
+                continue
+            if lower_token in spec["keywords"]:
+                room_parts.append(token.strip(",;").title())
+                previous_was_room_token = True
+                continue
+            if re.fullmatch(r"\d{1,4}", normalized):
+                numeric_columns.append(int(normalized))
+                previous_was_room_token = False
+                continue
+            break
+
+        room = " ".join(room_parts).strip()
+        return room or None, _infer_gtd_from_trailing_columns(numeric_columns)
+
+    return None, None
+
+
+def _match_room_alias(value: str, aliases: tuple[str, ...]) -> str | None:
+    lowered = value.lower()
+    for alias in sorted(aliases, key=len, reverse=True):
+        alias_lower = alias.lower()
+        if lowered == alias_lower or lowered.startswith(f"{alias_lower} "):
+            return value[: len(alias)]
+    return None
+
+
+def _infer_gtd_from_trailing_columns(columns: list[int]) -> int | None:
+    if not columns:
+        return None
+    if len(columns) == 1:
+        return columns[0]
+    if len(columns) == 2:
+        return columns[0]
+    if len(columns) == 3:
+        return columns[1]
+    return columns[-1]
+
+
+def _clean_room(value: str | None, gtd: int | None) -> str | None:
+    room = _strip_room_value(value)
+    if not room:
+        return None
     if gtd is not None:
         room = re.sub(rf"\b{gtd}\b", "", room).strip()
     room = " ".join(room.split()).strip(" -")

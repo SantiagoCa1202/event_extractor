@@ -275,6 +275,49 @@ Boardroom
         self.assertFalse(breakdown["required"])
         self.assertEqual(breakdown["quantity"], 0)
 
+    def test_parses_room_patterns_with_internal_exp_and_room_suffixes(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 709200
+FUNCTION DAY/DATE: Wednesday, April 15, 2026
+ORGANIZATION: Example Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+7:00 AM-8:00 AM Breakfast Buffet Symphony 6 & 7 50 100
+12:00 PM-1:00 PM Plated Lunch Carolina A & C 25 150
+3:00 PM-4:00 PM Break Governor's 2 & 3 175
+5:00 PM-6:00 PM Break Executive Boardroom 12 12
+7:00 AM Breakfast Buffet Symphony 6 & 7
+Continental
+Danish
+12:00 PM Plated Lunch Carolina A & C
+Hot Plated Lunch
+Chicken
+3:00 PM Break Governor's 2 & 3
+Coffee
+5:00 PM Break Executive Boardroom
+Coffee
+ROOM SETUP 7:00 AM-8:00 AM Breakfast Buffet Symphony 6 & 7
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+
+        symphony = next(event for event in events if event["service"]["time"]["start"] == "7:00 AM")
+        self.assertEqual(symphony["service"]["room"], "Symphony 6 & 7")
+        self.assertEqual(symphony["service"]["gtd"], 50)
+
+        carolina = next(event for event in events if event["service"]["time"]["start"] == "12:00 PM")
+        self.assertEqual(carolina["service"]["room"], "Carolina A & C")
+        self.assertEqual(carolina["service"]["gtd"], 25)
+
+        governors = next(event for event in events if event["service"]["time"]["start"] == "3:00 PM")
+        self.assertEqual(governors["service"]["room"], "Governor's 2 & 3")
+        self.assertEqual(governors["service"]["gtd"], 175)
+
+        executive = next(event for event in events if event["service"]["time"]["start"] == "5:00 PM")
+        self.assertEqual(executive["service"]["room"], "Executive Boardroom")
+        self.assertEqual(executive["service"]["gtd"], 12)
+
 
 if __name__ == "__main__":
     unittest.main()
