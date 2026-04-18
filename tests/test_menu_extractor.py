@@ -1,6 +1,6 @@
 import unittest
 
-from beo_pipeline.menu_extractor import derive_menu_style, extract_menu_sections
+from beo_pipeline.menu_extractor import derive_menu_style, extract_dietary_restrictions, extract_menu_sections
 from beo_pipeline.menu_normalizer import normalize_item_line
 
 
@@ -630,6 +630,134 @@ class MenuExtractorTests(unittest.TestCase):
         )
         sections = extract_menu_sections(raw)
         self.assertIsNone(derive_menu_style(raw, sections))
+
+    def test_normalize_buffalo_sauce_on_side_standardizes_name(self) -> None:
+        items = normalize_item_line("Buffalo Sauce on Side")
+        self.assertEqual([item.name for item in items], ["Buffalo Sauce"])
+
+    def test_normalize_combined_granola_and_breakfast_bars_keeps_single_line(self) -> None:
+        items = normalize_item_line("Assorted Granola, Protein and Breakfast Bars")
+        self.assertEqual([item.name for item in items], ["Assorted Granola, Protein and Breakfast Bars"])
+
+    def test_normalize_special_cases_for_unknown_item_cleanup(self) -> None:
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Assorted Granola, Protein and Breakfast Bars - Meck 1&2")],
+            ["Assorted Granola, Protein and Breakfast Bars"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Assorted Granola, Protein and Power Bars @ $7 Each")],
+            ["Assorted Granola, Protein and Breakfast Bars"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Pickled Vegetables, Crackers, and Accoutrement")],
+            ["Pickled Vegetables", "Crackers", "Accoutrement"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("BBQ, Korean, and Buffalo Sauce on Side")],
+            ["BBQ", "Korean", "Buffalo Sauce"],
+        )
+
+    def test_extract_menu_sections_skips_menu_tbd_placeholder(self) -> None:
+        raw = "\n".join(
+            [
+                "4:00 PM Special Mecklenburg Ballroom",
+                "(1) Menu TBD -- referring to Chef Roberto!",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        self.assertEqual(sections, [])
+
+    def test_extract_dietary_restrictions_supports_dietary_colon_heading(self) -> None:
+        raw = "\n".join(
+            [
+                "12:00 PM Box Lunch LM PDR",
+                "Boxed Lunch",
+                "DIETARY:",
+                "6 Chefs Choice Vegetarian Options",
+                "Banana - Scott Z.",
+            ]
+        )
+        cleaned, dietary = extract_dietary_restrictions(raw)
+        self.assertNotIn("DIETARY:", cleaned)
+        self.assertEqual(dietary[0]["guest_name"], "Scott Z.")
+        self.assertEqual(dietary[0]["restrictions"], ["Banana"])
+
+    def test_boxed_lunch_keeps_only_named_choices_with_quantity(self) -> None:
+        raw = "\n".join(
+            [
+                "12:00 PM Box Lunch LM PDR",
+                "Boxed Lunch",
+                "(14) Smoke Master @ $50.00 per Person",
+                "Ham, Brie, Arugula,",
+                "Orange Marmalade,",
+                "Dijon Mustard",
+                "(45) Ovengold Turkey @ $50.00 per Person",
+                "Havarti Cheese, Bacon,",
+                "Arugula, Mustard",
+                "(45) Caesar BLT Wrap @ $50.00 per Person",
+                "Chicken, Bacon, Lettuce,",
+                "Tomato, Parmigiano",
+                "Caesar Dressing",
+                "Each lunch is packed with one sandwich, bag of chips, cookie, whole fruit and a bottled water",
+                "DIETARY:",
+                "6 Chefs Choice Vegetarian Options",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        boxed = next(section for section in sections if section.title == "Boxed Lunch")
+        self.assertEqual([item.name for item in boxed.items], ["Smoke Master", "Ovengold Turkey", "Caesar BLT Wrap"])
+        self.assertEqual([item.quantity for item in boxed.items], [14, 45, 45])
+        self.assertIn("Ham, Brie, Arugula", boxed.items[0].notes)
+        self.assertIn("Havarti Cheese, Bacon", boxed.items[1].notes)
+        self.assertIn("Chicken, Bacon, Lettuce", boxed.items[2].notes)
+
+    def test_extracts_deli_express_buffet_sections_as_menu(self) -> None:
+        raw = "\n".join(
+            [
+                "12:00 PM Lunch Buffet Governor's Foyer",
+                "Noda Deli Express Buffet - Served in Governor's Foyer",
+                "Greens:",
+                "Spring Mix with Cherry Tomato, Cucumber, Shredded Carrot, Shredded Cheddar, Black Olives, Buttermilk Ranch, and White Balsamic Dressing",
+                "Country Potato Salad: Bacon, Mustard, Relish, Egg, Herbs, Mayonnaise",
+                "Kettle Chips",
+                "Breads: White Hoagie Rolls, Kaiser Wheat Roll, Wheat Wrap, Sliced Sourdough Bread",
+                "Spreads: Mayonnaise, Dijon Mustard, Chipotle Aioli, Pesto Aioli, Oil & Vinegar",
+                "Boards Head Meats: Turkey, Ham, Mortadella, Chicken Salad",
+                "Cheese: Smoked Gouda, Sharp Cheddar, Pepper Jack, Swiss Cheese",
+                "Condiments: Tomato, Onion, Pickle Spears, Lettuce",
+                "Dessert: Assorted Cookies and Dessert Bars",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        self.assertEqual(derive_menu_style(raw, sections), "Noda Deli Express Buffet - Served in Governor's Foyer")
+        greens = next(section for section in sections if section.title == "Greens")
+        self.assertEqual(
+            [item.name for item in greens.items],
+            [
+                "Spring Mix",
+                "Cherry Tomato",
+                "Cucumber",
+                "Shredded Carrot",
+                "Shredded Cheddar",
+                "Black Olives",
+                "Buttermilk Ranch",
+                "White Balsamic Dressing",
+            ],
+        )
+        country_potato_salad = next(section for section in sections if section.title == "Country Potato Salad")
+        self.assertEqual(
+            [item.name for item in country_potato_salad.items],
+            ["Country Potato Salad: Bacon, Mustard, Relish, Egg, Herbs, Mayonnaise"],
+        )
+        items = next(section for section in sections if section.title == "Items")
+        self.assertEqual([item.name for item in items.items], ["Kettle Chips"])
+        breads = next(section for section in sections if section.title == "Breads")
+        self.assertEqual(
+            [item.name for item in breads.items],
+            ["White Hoagie Rolls", "Kaiser Wheat Roll", "Wheat Wrap", "Sliced Sourdough Bread"],
+        )
+        meats = next(section for section in sections if section.title == "Boards Head Meats")
+        self.assertEqual([item.name for item in meats.items], ["Turkey", "Ham", "Mortadella", "Chicken Salad"])
 
 
 if __name__ == "__main__":

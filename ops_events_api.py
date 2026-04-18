@@ -42,6 +42,7 @@ def upload_events_to_ops(
     token: str | None = None,
     timeout_seconds: int | None = None,
     source_system: str | None = None,
+    allow_unresolved_unknowns: bool = False,
 ) -> OpsImportResult:
     job_id = job_id or str(uuid.uuid4())
     source_system = source_system or os.getenv("OPS_EVENTS_SOURCE_SYSTEM", DEFAULT_SOURCE_SYSTEM)
@@ -51,6 +52,16 @@ def upload_events_to_ops(
 
     if not events:
         return OpsImportResult(False, False, None, job_id, "No events to upload.")
+
+    unresolved_unknowns = _collect_unresolved_unknown_items(events)
+    if unresolved_unknowns and not allow_unresolved_unknowns:
+        return OpsImportResult(
+            False,
+            False,
+            None,
+            job_id,
+            f"OPS upload skipped because unresolved unknown_items remain: {', '.join(unresolved_unknowns[:10])}",
+        )
 
     base_url = (base_url or os.getenv("OPS_EVENTS_API_BASE_URL", "")).strip()
     token = (token or os.getenv("OPS_EVENTS_API_TOKEN", "")).strip()
@@ -436,3 +447,74 @@ def _read_int_env(name: str, default: int) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def collect_unknown_items_report(events: list[dict[str, Any]]) -> dict[str, Any]:
+    items: dict[str, dict[str, Any]] = {}
+    for event in events:
+        event_order = str(event.get("event_order") or "").strip() or None
+        date = event.get("date")
+        service = event.get("service") if isinstance(event.get("service"), dict) else {}
+        function = service.get("function") if isinstance(service, dict) else None
+        room = service.get("room") if isinstance(service, dict) else None
+        details = event.get("details") if isinstance(event.get("details"), dict) else {}
+        menu_sections = details.get("menu_sections") if isinstance(details, dict) else []
+        if not isinstance(menu_sections, list):
+            continue
+        for section in menu_sections:
+            if not isinstance(section, dict):
+                continue
+            operational_split = section.get("operational_split")
+            if not isinstance(operational_split, dict):
+                continue
+            section_unknowns = operational_split.get("unknown_items")
+            if not isinstance(section_unknowns, list):
+                continue
+
+            section_items = section.get("items") if isinstance(section.get("items"), list) else []
+            item_lookup: dict[str, list[dict[str, Any]]] = {}
+            for item in section_items:
+                if not isinstance(item, dict):
+                    continue
+                item_name = str(item.get("name") or "").strip()
+                if not item_name:
+                    continue
+                item_lookup.setdefault(item_name, []).append(item)
+
+            for raw_item in section_unknowns:
+                item_name = str(raw_item or "").strip()
+                if not item_name:
+                    continue
+
+                entry = items.setdefault(
+                    item_name,
+                    {
+                        "temperature_zone": "unknown",
+                        "suggested_route": None,
+                        "occurrences": [],
+                    },
+                )
+                matches = item_lookup.get(item_name) or [{}]
+                for matched_item in matches:
+                    occurrence = {
+                        "event_order": event_order,
+                        "date": date,
+                        "function": function,
+                        "room": room,
+                        "section_title": section.get("title"),
+                        "section_type": section.get("type"),
+                        "course_type": section.get("course_type"),
+                        "source_text": matched_item.get("source_text") if isinstance(matched_item, dict) else None,
+                    }
+                    if occurrence not in entry["occurrences"]:
+                        entry["occurrences"].append(occurrence)
+
+    return {
+        "total_unique_unknown_items": len(items),
+        "items": dict(sorted(items.items())),
+    }
+
+
+def _collect_unresolved_unknown_items(events: list[dict[str, Any]]) -> list[str]:
+    unknowns_report = collect_unknown_items_report(events)
+    return sorted(unknowns_report["items"].keys())

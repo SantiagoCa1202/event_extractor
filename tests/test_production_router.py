@@ -781,6 +781,227 @@ class ProductionRouterTests(unittest.TestCase):
         self.assertEqual(names, ["Pico de Gallo"])
         self.assertEqual(annotated[0]["operational_split"]["cold_kitchen_items"], ["Pico de Gallo"])
 
+    def test_routes_popcorn_flavors_to_cold_by_source_context(self) -> None:
+        sections = [
+            {
+                "title": "Snacks",
+                "type": "snack_items",
+                "service_role": "break",
+                "course_type": "other",
+                "items": [
+                    {"name": "Butter", "source_text": "Popcorn - Butter, Jalapeno, Kettle"},
+                    {"name": "Jalapeno", "source_text": "Popcorn - Butter, Jalapeno, Kettle"},
+                    {"name": "Kettle", "source_text": "Popcorn - Butter, Jalapeno, Kettle"},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(items["Butter"], "cold_kitchen")
+        self.assertEqual(items["Jalapeno"], "cold_kitchen")
+        self.assertEqual(items["Kettle"], "cold_kitchen")
+
+    def test_routes_mini_corndogs_hot_and_condiments_cold(self) -> None:
+        sections = [
+            {
+                "title": "Passed",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Mini Corndogs"},
+                    {"name": "Ketchup"},
+                    {"name": "Mustard"},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(items["Mini Corndogs"], "hot_kitchen")
+        self.assertEqual(items["Ketchup"], "cold_kitchen")
+        self.assertEqual(items["Mustard"], "cold_kitchen")
+
+    def test_routes_selection_of_rolls_and_butter_to_hot(self) -> None:
+        sections = [
+            {
+                "title": "Items",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Selection of Rolls and Butter"},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        item = annotated[0]["items"][0]
+        self.assertEqual(item["production_area"]["temperature_zone"], "hot_kitchen")
+
+    def test_ignores_upon_requests_and_routes_accoutrement_and_buffalo_sauce_cold(self) -> None:
+        sections = [
+            {
+                "title": "Items",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Upon Requests :"},
+                    {"name": "Accoutrement"},
+                    {"name": "Buffalo Sauce", "source_text": "Buffalo Sauce on Side"},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        names = [item["name"] for item in annotated[0]["items"]]
+        items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(names, ["Accoutrement", "Buffalo Sauce"])
+        self.assertEqual(items["Accoutrement"], "cold_kitchen")
+        self.assertEqual(items["Buffalo Sauce"], "cold_kitchen")
+
+    def test_ignores_selection_of_hot_tazo_teas(self) -> None:
+        sections = [
+            {
+                "title": "Beverages Charged on Consumption",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "beverage",
+                "items": [
+                    {
+                        "name": "a selection of hot Tazo Teas",
+                        "source_text": "Freshly brewed Starbucks Regular and Decaffeinated Coffee, and a selection of hot Tazo Teas",
+                    }
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        self.assertEqual(annotated[0]["items"], [])
+        self.assertEqual(annotated[0]["operational_split"]["unknown_items"], [])
+
+    def test_routes_boxed_lunch_choices_to_cold(self) -> None:
+        sections = [
+            {
+                "title": "Boxed Lunch",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Smoke Master", "quantity": 14},
+                    {"name": "Ovengold Turkey", "quantity": 45},
+                    {"name": "Caesar BLT Wrap", "quantity": 45},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(items["Smoke Master"], "cold_kitchen")
+        self.assertEqual(items["Ovengold Turkey"], "cold_kitchen")
+        self.assertEqual(items["Caesar BLT Wrap"], "cold_kitchen")
+
+    def test_routes_deli_buffet_sections_to_cold(self) -> None:
+        sections = [
+            {
+                "title": "Boards Head Meats",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Turkey"},
+                    {"name": "Ham"},
+                    {"name": "Mortadella"},
+                    {"name": "Chicken Salad"},
+                ],
+            },
+            {
+                "title": "Cheese",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Smoked Gouda"},
+                    {"name": "Sharp Cheddar"},
+                ],
+            },
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        meat_items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        cheese_items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[1]["items"]}
+        self.assertEqual(meat_items["Turkey"], "cold_kitchen")
+        self.assertEqual(meat_items["Ham"], "cold_kitchen")
+        self.assertEqual(meat_items["Mortadella"], "cold_kitchen")
+        self.assertEqual(meat_items["Chicken Salad"], "cold_kitchen")
+        self.assertEqual(cheese_items["Smoked Gouda"], "cold_kitchen")
+        self.assertEqual(cheese_items["Sharp Cheddar"], "cold_kitchen")
+
+    def test_routes_slider_display_items_hot_and_cold(self) -> None:
+        sections = [
+            {
+                "title": "Slider Display",
+                "type": "display",
+                "service_role": "display",
+                "course_type": "other",
+                "items": [
+                    {"name": "Mini Cheeseburgers"},
+                    {"name": "Brioche Buns"},
+                    {"name": "BBQ Pulled Pork"},
+                    {"name": "Hawaiian Buns"},
+                    {"name": "Green Tomato"},
+                    {"name": "Pimento Cheese"},
+                    {"name": "Chipotle Ketchup"},
+                    {"name": "Cornichon"},
+                    {"name": "Pickled Onion"},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(items["Mini Cheeseburgers"], "hot_kitchen")
+        self.assertEqual(items["Brioche Buns"], "hot_kitchen")
+        self.assertEqual(items["BBQ Pulled Pork"], "hot_kitchen")
+        self.assertEqual(items["Hawaiian Buns"], "hot_kitchen")
+        self.assertEqual(items["Green Tomato"], "cold_kitchen")
+        self.assertEqual(items["Pimento Cheese"], "cold_kitchen")
+        self.assertEqual(items["Chipotle Ketchup"], "cold_kitchen")
+        self.assertEqual(items["Cornichon"], "cold_kitchen")
+        self.assertEqual(items["Pickled Onion"], "cold_kitchen")
+
+    def test_routes_new_items_from_unknown_items_review_file(self) -> None:
+        sections = [
+            {
+                "title": "Custom Lunch Menu",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Black Bean Salad"},
+                    {"name": "Beans"},
+                    {"name": "Buttered Noodles"},
+                    {"name": "Hard and Soft Taco Shells"},
+                    {"name": "Salsa"},
+                    {"name": "Shredded Cheese"},
+                ],
+            },
+            {
+                "title": "Items",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "1 Gallon of Each"},
+                    {"name": "Plated Lunch (Salad and Dessert Pre-Set by 11:15am"},
+                    {"name": "Tea Bag Assortment"},
+                ],
+            },
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        custom = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(custom["Black Bean Salad"], "cold_kitchen")
+        self.assertEqual(custom["Beans"], "hot_kitchen")
+        self.assertEqual(custom["Buttered Noodles"], "hot_kitchen")
+        self.assertEqual(custom["Hard and Soft Taco Shells"], "hot_kitchen")
+        self.assertEqual(custom["Salsa"], "cold_kitchen")
+        self.assertEqual(custom["Shredded Cheese"], "cold_kitchen")
+        self.assertEqual(annotated[1]["items"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

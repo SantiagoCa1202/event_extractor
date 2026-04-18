@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from .menu_normalizer import normalize_item_line, normalize_title
 from .schemas import MenuItem, MenuSection
@@ -151,7 +152,10 @@ EXCLUDED_NON_AREA_ITEM_PATTERNS = (
     r"^rose wine$",
     r"^white wine$",
 )
-PENDING_PLACEHOLDER_PATTERNS = (r"^chef'?s choice\s*-\s*assorted variety$",)
+PENDING_PLACEHOLDER_PATTERNS = (
+    r"^chef'?s choice\s*-\s*assorted variety$",
+    r"^menu tbd\b.*$",
+)
 COURSE_HINTS = {
     "salad": "salad",
     "greens": "salad",
@@ -177,6 +181,8 @@ MANUAL_COMBINE_PAIRS = {
     ("(displayed) macaroni", "cheese bites"): "(Displayed) Macaroni & Cheese Bites",
 }
 TITLE_ALIASES = {
+    "boxed lunch": "Boxed Lunch",
+    "box lunch": "Boxed Lunch",
     "greens": "Greens",
     "condiments": "Condiments",
     "passed": "Passed",
@@ -192,6 +198,17 @@ TITLE_ALIASES = {
     "preset alternating dessert": "Preset Alternating Dessert",
     "duo plate meal (served after opening speech)": "Duo Plate Meal (Served After Opening Speech)",
 }
+INLINE_MENU_SECTION_TITLES = {
+    "greens",
+    "greens & toppings",
+    "breads",
+    "spreads",
+    "boards head meats",
+    "cheese",
+    "condiments",
+    "dessert",
+    "country potato salad",
+}
 JOINED_SECTION_TITLES = {
     "preset salad",
     "preset salad choice",
@@ -204,6 +221,42 @@ JOINED_SECTION_TITLES = {
     "duo plate meal (served after opening speech)",
     "preset alternating dessert",
 }
+
+
+def extract_dietary_restrictions(raw_block: str) -> tuple[str, list[dict[str, Any]]]:
+    lines = (raw_block or "").splitlines()
+    cleaned_lines: list[str] = []
+    restrictions: list[dict[str, Any]] = []
+    collecting = False
+
+    for raw_line in lines:
+        line = _clean_line(raw_line)
+        lower = line.lower()
+        if lower in {"dietary restrictions", "dietary restrictions:", "dietary:", "dietary"}:
+            collecting = True
+            continue
+
+        if collecting:
+            if not line:
+                continue
+            if _looks_like_block_header(line) or lower.startswith("room setup"):
+                collecting = False
+                cleaned_lines.append(raw_line)
+                continue
+            if _is_dietary_note_line(line):
+                continue
+
+            parsed = _parse_dietary_restriction_line(line)
+            if parsed is not None:
+                restrictions.append(parsed)
+                continue
+
+            collecting = False
+
+        cleaned_lines.append(raw_line)
+
+    cleaned_raw = "\n".join(line for line in cleaned_lines if line is not None)
+    return cleaned_raw, restrictions
 
 
 def extract_menu_sections(raw_block: str) -> list[MenuSection]:
@@ -280,6 +333,12 @@ def extract_menu_sections(raw_block: str) -> list[MenuSection]:
             sections.append(current)
             continue
 
+        if _starts_standalone_item_section(current, line):
+            current = _create_section("Items")
+            current.items.extend(normalize_item_line(line))
+            sections.append(current)
+            continue
+
         if current is not None and current.type == "snack_items":
             current.items.extend(normalize_item_line(line))
             continue
@@ -292,15 +351,24 @@ def extract_menu_sections(raw_block: str) -> list[MenuSection]:
             _append_line_to_joined_section(current, line)
             continue
 
-        colon_match = re.match(
-            r"^(Sides|Dessert|Beverages?|Choice of Two Proteins|Greens\s*&\s*Toppings|Greens|Condiments)\s*:\s*(.+)$",
-            line,
-            re.IGNORECASE,
-        )
+        colon_match = re.match(r"^([A-Za-z'& ]{2,80})\s*:\s*(.+)$", line, re.IGNORECASE)
         if colon_match:
-            current = _create_section(colon_match.group(1))
+            section_title = normalize_title(colon_match.group(1))
+            current = _create_section(section_title)
             if current.title in {"Greens & Toppings", "Greens", "Condiments"}:
                 current.items.extend(_split_greens_and_toppings_items(colon_match.group(2)))
+            elif _should_keep_colon_section_whole(current.title):
+                current.items.extend(
+                    [
+                        MenuItem(
+                            name=f"{current.title}: {normalize_title(colon_match.group(2))}",
+                            quantity=None,
+                            unit=None,
+                            notes=None,
+                            source_text=line,
+                        )
+                    ]
+                )
             else:
                 current.items.extend(normalize_item_line(colon_match.group(2)))
             sections.append(current)
@@ -337,13 +405,41 @@ def extract_menu_sections(raw_block: str) -> list[MenuSection]:
     return [section for section in processed if section.items or _should_keep_empty_section(section)]
 
 
+def _parse_dietary_restriction_line(line: str) -> dict[str, Any] | None:
+    match = re.match(r"^(?P<restrictions>.+?)\s*-\s*(?P<guest>[^-][^-]*)$", line)
+    if not match:
+        return None
+    restriction_text = match.group("restrictions").strip(" ,")
+    guest_name = match.group("guest").strip()
+    if not restriction_text or not guest_name:
+        return None
+    items = [part.strip() for part in re.split(r",|/", restriction_text) if part.strip()]
+    if not items:
+        return None
+    return {
+        "guest_name": guest_name,
+        "restrictions": items,
+        "source_text": line,
+    }
+
+
+def _is_dietary_note_line(line: str) -> bool:
+    lower = line.strip().lower()
+    return bool(
+        re.fullmatch(r"\d+\s+chef'?s choice .+", lower)
+        or re.fullmatch(r"\d+\s+vegetarian options?", lower)
+        or re.fullmatch(r"please have .+", lower)
+        or re.fullmatch(r"no nuts!+", lower)
+    )
+
+
 def derive_menu_style(raw_block: str, sections: list[MenuSection]) -> str | None:
     for line in (_clean_line(line) for line in (raw_block or "").splitlines()):
         if line and _is_menu_style_only_title(line):
             return _normalize_menu_style_title(line)
     for section in sections:
         title = section.title.lower()
-        if title not in {"items", "beverages", "sides", "dessert", "passed", "displayed"} and not _is_operational_note_title(
+        if title not in {"items", "beverages", "sides", "dessert", "passed", "displayed"} and title not in INLINE_MENU_SECTION_TITLES and not _is_operational_note_title(
             section.title
         ):
             return section.title
@@ -416,6 +512,20 @@ def _starts_snack_section(line: str, current: MenuSection | None) -> bool:
     return any(hint in lower for hint in SNACK_HINTS) and "charged on consumption" not in lower
 
 
+def _starts_standalone_item_section(current: MenuSection | None, line: str) -> bool:
+    if current is None:
+        return False
+    current_title = current.title.lower().strip()
+    if current_title not in INLINE_MENU_SECTION_TITLES:
+        return False
+    lower = line.lower().strip()
+    if ":" in line or "@" in line:
+        return False
+    if _contains_title_hint(lower):
+        return False
+    return len(line.split()) <= 4
+
+
 def _create_section(title: str, preferred_type: str | None = None) -> MenuSection:
     title = normalize_title(title)
     if _is_menu_style_only_title(title):
@@ -426,9 +536,12 @@ def _create_section(title: str, preferred_type: str | None = None) -> MenuSectio
         lower = title.lower()
     if preferred_type == "snack_items":
         return MenuSection(title=title, type="snack_items", service_role="bar", course_type="break")
-    if "greens & toppings" in lower or lower == "greens":
+    if lower in {"greens", "greens & toppings"}:
         section_type = "cold_items"
         role = "buffet"
+    elif "boxed lunch" in lower or "box lunch" in lower:
+        section_type = "course"
+        role = "other"
     elif "display" in lower:
         section_type = "display"
         role = "display"
@@ -483,6 +596,7 @@ def _create_section(title: str, preferred_type: str | None = None) -> MenuSectio
 
 
 def _post_process_section(section: MenuSection) -> MenuSection:
+    section = _collapse_boxed_lunch_items(section)
     quantity_only_items = []
     for item in section.items:
         name = (item.name or "").strip().lower()
@@ -515,10 +629,19 @@ def _post_process_section(section: MenuSection) -> MenuSection:
     return section
 
 
+def _should_keep_colon_section_whole(title: str) -> bool:
+    return title.lower().strip() in {"country potato salad"}
+
+
 def _is_breakfast_sandwich_variant(value: str) -> bool:
     lower = value.lower()
     variant_hints = ("sandwich -", "muffin -", "bagel sandwich", "biscuit sandwich", "croissant sandwich", "english muffin -")
     return any(hint in lower for hint in variant_hints)
+
+
+def _is_boxed_lunch_section(section: MenuSection) -> bool:
+    lower = section.title.lower().strip()
+    return lower in {"boxed lunch", "box lunch"}
 
 
 def _is_excluded_non_area_item(value: str) -> bool:
@@ -556,7 +679,7 @@ def _should_keep_empty_section(section: MenuSection) -> bool:
 
 
 def _is_pending_placeholder(value: str) -> bool:
-    lower = value.strip().lower()
+    lower = re.sub(r"^\(\d+\)\s+", "", value.strip().lower())
     return any(re.fullmatch(pattern, lower) for pattern in PENDING_PLACEHOLDER_PATTERNS)
 
 
@@ -719,6 +842,45 @@ def _apply_special_dietary_counts(section: MenuSection) -> None:
         notes.extend(item.source_text or item.name for item in special_items)
         target.notes = " | ".join(notes)
     section.items = [item for item in section.items if item not in special_items]
+
+
+def _collapse_boxed_lunch_items(section: MenuSection) -> MenuSection:
+    if not _is_boxed_lunch_section(section):
+        return section
+
+    collapsed: list[MenuItem] = []
+    current_choice: MenuItem | None = None
+
+    for item in section.items:
+        name = (item.name or "").strip()
+        lower = name.lower()
+        is_priced_choice = item.quantity is not None or bool(re.match(r"^\(\d+\)\s+.+@\s*\$[\d.]+", item.source_text or "", re.IGNORECASE))
+
+        if is_priced_choice:
+            current_choice = MenuItem(
+                name=name,
+                quantity=item.quantity,
+                unit=item.unit,
+                notes=item.notes,
+                source_text=item.source_text,
+            )
+            collapsed.append(current_choice)
+            continue
+
+        if lower in {"dietary", "dietary:"} or lower.startswith("each lunch is packed with "):
+            current_choice = None
+            continue
+
+        if current_choice is not None:
+            note_text = (item.source_text or name).strip()
+            note_parts = [part for part in [current_choice.notes, note_text] if part]
+            current_choice.notes = " | ".join(note_parts)
+            if item.source_text:
+                source_parts = [part for part in [current_choice.source_text, item.source_text] if part]
+                current_choice.source_text = "\n".join(source_parts)
+
+    section.items = collapsed
+    return section
 
 
 def _combine_joined_section_items(section: MenuSection) -> MenuSection:

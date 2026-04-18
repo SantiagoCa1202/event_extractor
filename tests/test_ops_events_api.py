@@ -5,7 +5,7 @@ from io import BytesIO
 from unittest.mock import patch
 from urllib.error import HTTPError
 
-from ops_events_api import build_ops_import_payload, upload_events_to_ops
+from ops_events_api import build_ops_import_payload, collect_unknown_items_report, upload_events_to_ops
 
 
 STANDARD_EVENT = {
@@ -148,6 +148,79 @@ class OpsEventsApiTests(unittest.TestCase):
         event = payload["events"][0]
         self.assertEqual(event["service"]["room"], "Carolina Ballroom")
         self.assertLessEqual(len(event["identity"]["event_instance_key"]), 32)
+
+    def test_upload_events_to_ops_skips_when_unknown_items_remain(self) -> None:
+        unresolved_event = {
+            **STANDARD_EVENT,
+            "details": {
+                **STANDARD_EVENT["details"],
+                "menu_sections": [
+                    {
+                        "title": "Buffet",
+                        "operational_split": {
+                            "hot_kitchen_items": [],
+                            "cold_kitchen_items": [],
+                            "unknown_items": ["Mystery Item"],
+                        },
+                    }
+                ],
+            },
+        }
+
+        result = upload_events_to_ops([unresolved_event], source_file="sample.pdf", job_id="job-unknown")
+
+        self.assertFalse(result.attempted)
+        self.assertFalse(result.success)
+        self.assertIn("Mystery Item", result.message)
+
+    def test_collect_unknown_items_report_groups_occurrences(self) -> None:
+        unresolved_event = {
+            **STANDARD_EVENT,
+            "service": {
+                **STANDARD_EVENT["service"],
+                "function": "Buffet Lunch",
+                "room": "Grand Ballroom",
+            },
+            "details": {
+                **STANDARD_EVENT["details"],
+                "menu_sections": [
+                    {
+                        "title": "Buffet",
+                        "type": "course",
+                        "course_type": "other",
+                        "items": [
+                            {"name": "Mystery Item", "source_text": "Mystery Item @ $12"},
+                        ],
+                        "operational_split": {
+                            "hot_kitchen_items": [],
+                            "cold_kitchen_items": [],
+                            "unknown_items": ["Mystery Item"],
+                        },
+                    }
+                ],
+            },
+        }
+
+        report = collect_unknown_items_report([unresolved_event])
+
+        self.assertEqual(report["total_unique_unknown_items"], 1)
+        self.assertIn("Mystery Item", report["items"])
+        mystery = report["items"]["Mystery Item"]
+        self.assertEqual(mystery["temperature_zone"], "unknown")
+        self.assertIsNone(mystery["suggested_route"])
+        self.assertEqual(
+            mystery["occurrences"][0],
+            {
+                "event_order": "528954",
+                "date": "April 07, 2026",
+                "function": "Buffet Lunch",
+                "room": "Grand Ballroom",
+                "section_title": "Buffet",
+                "section_type": "course",
+                "course_type": "other",
+                "source_text": "Mystery Item @ $12",
+            },
+        )
 
     @patch.dict(
         os.environ,

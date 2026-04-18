@@ -318,6 +318,41 @@ ROOM SETUP 7:00 AM-8:00 AM Breakfast Buffet Symphony 6 & 7
         self.assertEqual(executive["service"]["room"], "Executive Boardroom")
         self.assertEqual(executive["service"]["gtd"], 12)
 
+    def test_extracts_dietary_restrictions_without_treating_them_as_menu_items(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 731420
+FUNCTION DAY/DATE: Monday, April 20, 2026
+ORGANIZATION: Example Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+6:00 PM-8:00 PM Reception Symphony Convention Foyer 300
+6:00 PM Reception Symphony Convention Foyer
+(300) 2 Chef's Choice Passed HD's @ $8 Each
+Dietary Restrictions
+Banana - Scott Z.
+Beef - Danine Prakash-Stokes
+Shellfish - Aubrey R.
+Gluten, Garlic, Onion, Cashew, Shellfish, Beef - Suzan H.
+ROOM SETUP 6:00 PM-8:00 PM Reception Symphony Convention Foyer
+Cocktail
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(len(events), 1)
+        event = events[0]
+        dietary = event["details"]["dietary_restrictions"]
+        self.assertEqual(len(dietary), 4)
+        self.assertEqual(dietary[0]["guest_name"], "Scott Z.")
+        self.assertEqual(dietary[0]["restrictions"], ["Banana"])
+        self.assertEqual(
+            dietary[3]["restrictions"],
+            ["Gluten", "Garlic", "Onion", "Cashew", "Shellfish", "Beef"],
+        )
+        menu_names = [item for section in event["details"]["menu_sections"] for item in section["operational_split"]["unknown_items"]]
+        self.assertNotIn("Banana", menu_names)
+        self.assertIn("dietary_restrictions", event["tags"])
+
 
 if __name__ == "__main__":
     unittest.main()

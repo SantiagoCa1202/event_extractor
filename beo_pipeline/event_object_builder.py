@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from .food_service_filter import is_food_service_function
-from .menu_extractor import derive_menu_style, extract_menu_sections
+from .menu_extractor import derive_menu_style, extract_dietary_restrictions, extract_menu_sections
 from .menu_normalizer import build_menu_fingerprint
 from .production_router import annotate_menu_sections_with_production
 from .schemas import BeoDocument, EventCandidate, SourceTrace, Staffing, to_dict
@@ -15,12 +15,13 @@ from .validators import validate_event_payload
 
 
 def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict | None:
-    menu_sections = extract_menu_sections(candidate.raw)
+    cleaned_raw, dietary_restrictions = extract_dietary_restrictions(candidate.raw)
+    menu_sections = extract_menu_sections(cleaned_raw)
     menu_item_count = sum(len(section.items) for section in menu_sections)
     item_names = [item.name for section in menu_sections for item in section.items]
     is_food, filter_reasons = is_food_service_function(
         candidate.function_name,
-        candidate.raw,
+        cleaned_raw,
         menu_item_count,
         item_names,
     )
@@ -28,7 +29,7 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
         return None
 
     service_info = classify_service(candidate.function_name, candidate.raw, menu_sections)
-    menu_style = derive_menu_style(candidate.raw, menu_sections)
+    menu_style = derive_menu_style(cleaned_raw, menu_sections)
     if service_info["category"] == "plated":
         menu_style = None
     menu_sections_payload = annotate_menu_sections_with_production([to_dict(section) for section in menu_sections])
@@ -69,6 +70,7 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
             "menu_fingerprint": build_menu_fingerprint(
                 [item.name for section in menu_sections for item in section.items]
             ),
+            "dietary_restrictions": dietary_restrictions,
         },
         "setup": {
             "breakdown_station": to_dict(setup["breakdown_station"]),
@@ -80,7 +82,7 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
         },
         "staffing": to_dict(staffing),
         "notes": notes,
-        "tags": _build_tags(candidate, service_info),
+        "tags": _build_tags(candidate, service_info, dietary_restrictions),
         "source_trace": to_dict(
             SourceTrace(
                 page_ranges=format_page_ranges(candidate.page_numbers),
@@ -109,10 +111,12 @@ def _extract_staffing(raw_block: str) -> Staffing:
     return staffing
 
 
-def _build_tags(candidate: EventCandidate, service_info: dict[str, str]) -> list[str]:
+def _build_tags(candidate: EventCandidate, service_info: dict[str, str], dietary_restrictions: list[dict] | None = None) -> list[str]:
     tags = [service_info["category"], service_info["meal_period"]]
     if candidate.attendance_match is None:
         tags.append("unmatched_attendance")
     if candidate.gtd is None:
         tags.append("missing_gtd")
+    if dietary_restrictions:
+        tags.append("dietary_restrictions")
     return sorted(set(tag for tag in tags if tag and tag != "unknown"))

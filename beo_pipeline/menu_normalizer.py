@@ -33,6 +33,7 @@ def normalize_item_line(line: str) -> list[MenuItem]:
         unit = "each"
 
     no_price = PRICE_SUFFIX_RE.sub("", cleaned).strip()
+    no_price = _normalize_special_cases(no_price)
     if no_price.lower() == "caluiflower":
         no_price = "Cauliflower"
     if "charged on consumption" in no_price.lower():
@@ -42,7 +43,7 @@ def normalize_item_line(line: str) -> list[MenuItem]:
     if _should_keep_whole(no_price):
         return [MenuItem(name=no_price, quantity=quantity, unit=unit, notes=notes, source_text=line)]
 
-    parts = [part.strip(" .") for part in re.split(r",|(?<!\w)&(?!\w)|\+", no_price) if part.strip()]
+    parts = [_normalize_special_cases(part.strip(" .")) for part in re.split(r",|(?<!\w)&(?!\w)|\+", no_price) if part.strip()]
     if len(parts) <= 1:
         return [MenuItem(name=no_price, quantity=quantity, unit=unit, notes=notes, source_text=line)]
     return [MenuItem(name=part, quantity=None, unit=None, notes=notes, source_text=line) for part in parts]
@@ -72,6 +73,7 @@ def _should_keep_whole(value: str) -> bool:
         "badass bobs pretzels with whole grain mustard",
         "hazel nut crunch cake & brule cheesecake",
         "pimento cheese & pickled shrimp bruschetta crostini",
+        "assorted granola, protein and breakfast bars",
     )
     if any(phrase in lower for phrase in preserve_whole_phrases):
         return True
@@ -106,3 +108,18 @@ def _should_keep_whole(value: str) -> bool:
 
 def _strip_service_prefix(value: str) -> str:
     return re.sub(r"^\((passed|displayed)\)\s*", "", value, flags=re.IGNORECASE).strip()
+
+
+def _normalize_special_cases(value: str) -> str:
+    normalized = value.strip()
+    normalized = re.sub(r"^(?:and\s+)", "", normalized, flags=re.IGNORECASE).strip()
+    normalized = re.sub(r"\s+-\s+meck\s*1\s*&\s*2$", "", normalized, flags=re.IGNORECASE).strip()
+
+    lower = normalized.lower()
+    replacements = {
+        "buffalo sauce on side": "Buffalo Sauce",
+        "protein and power bars": "Protein and Breakfast Bars",
+        "assorted granola, protein and power bars": "Assorted Granola, Protein and Breakfast Bars",
+        "rolls & butter": "Rolls with Butter",
+    }
+    return replacements.get(lower, normalized)
