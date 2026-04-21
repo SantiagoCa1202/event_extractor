@@ -266,6 +266,10 @@ class MenuExtractorTests(unittest.TestCase):
             ["Steel Cut Oatmeal", "Golden Raises", "Sliced Almonds", "Brown Sugar"],
         )
 
+    def test_preserves_corn_and_black_bean_salad_as_single_item(self) -> None:
+        items = normalize_item_line("Corn & Black Bean Salad")
+        self.assertEqual([item.name for item in items], ["Corn & Black Bean Salad"])
+
     def test_consolidates_plated_choice_sections(self) -> None:
         raw = "\n".join(
             [
@@ -681,6 +685,63 @@ class MenuExtractorTests(unittest.TestCase):
         self.assertNotIn("DIETARY:", cleaned)
         self.assertEqual(dietary[0]["guest_name"], "Scott Z.")
         self.assertEqual(dietary[0]["restrictions"], ["Banana"])
+
+    def test_extract_dietary_restrictions_survives_page_header_inside_block(self) -> None:
+        raw = "\n".join(
+            [
+                "2:15 PM Coffee Break",
+                "(1) French Macarons by the Dozen @ $56 per Dozen",
+                "Dietary Restrictions",
+                "Banana - Scott Z.",
+                "Beef - Danine Prakash-Stokes",
+                "Marriott Proprietary and Confidential",
+                "EVENT ORDER Page # 3 of 3",
+                "SHERATON CHARLOTTE HOTEL Event Order #: 743381",
+                "555 South McDowell Street, South Tower, Charlotte, NC 28204 Quote #: M-V394LB3",
+                "PHONE:(704) 372-4100 Folio #: 1242279",
+                "FUNCTION DAY/DATE: Wednesday, April 22, 2026",
+                "ORGANIZATION: Apply Synergies",
+                "Shellfish - Aubrey R.",
+                "Gluten, Garlic, Onion, Cashew, Shellfish, Beef - Suzan H.",
+                "Pineapple, Oranges - Tiffany J.",
+                "Dairy - Brandon S.",
+                "Fish, Shellfish, Almonds/Hazelnuts - Trond K.",
+            ]
+        )
+        cleaned, dietary = extract_dietary_restrictions(raw)
+        self.assertEqual(len(dietary), 7)
+        self.assertEqual(dietary[1]["guest_name"], "Danine Prakash-Stokes")
+        self.assertEqual(
+            dietary[3]["restrictions"],
+            ["Gluten", "Garlic", "Onion", "Cashew", "Shellfish", "Beef"],
+        )
+        self.assertNotIn("Suzan H.", cleaned)
+        self.assertNotIn("Trond K.", cleaned)
+
+    def test_ignores_custom_dietary_guidance_block_in_food_header(self) -> None:
+        raw = "\n".join(
+            [
+                "7:30 AM Breakfast Buffet",
+                "The Uptown",
+                "Assorted Danish, Croissants, Biscuits",
+                "*** Dietary needs in Food Header below:",
+                "Breakfast options for Dr. McGuirk:",
+                "(cid:9)Oatmeal (cooked in water only)",
+                "(cid:9)Fresh berries",
+                "(cid:9)Nonfat bread (such as sourdough) and jams",
+                "o(cid:9)Lunch options for Dr. McGuirk:",
+                "(cid:9)Large salad and no dressing (lemon on the side, if possible)",
+                "(cid:9)Wild rice, mixed beans, lentils, couscous, and quinoa (large portions preferred)",
+                "$52.00 per Person",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        names = [item.name for section in sections for item in section.items]
+        self.assertEqual(names, ["Assorted Danish", "Croissants", "Biscuits"])
+        self.assertNotIn("Breakfast options for Dr. McGuirk:", names)
+        self.assertNotIn("Oatmeal (cooked in water only)", names)
+        self.assertNotIn("Fresh berries", names)
+        self.assertNotIn("Large salad and no dressing (lemon on the side, if possible)", names)
 
     def test_boxed_lunch_keeps_only_named_choices_with_quantity(self) -> None:
         raw = "\n".join(

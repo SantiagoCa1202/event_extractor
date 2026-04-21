@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 from .food_service_filter import is_food_service_function
 from .menu_extractor import derive_menu_style, extract_dietary_restrictions, extract_menu_sections
@@ -49,6 +50,9 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
         "beo": {
             "type": document.beo_type,
             "revision_number": document.revision_number,
+            "file_name": Path(document.source_path).name if document.source_path else None,
+            "page_start": min(candidate.page_numbers) if candidate.page_numbers else None,
+            "page_end": max(candidate.page_numbers) if candidate.page_numbers else None,
         },
         "service": {
             "function": candidate.function_name,

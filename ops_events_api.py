@@ -18,6 +18,7 @@ import config  # noqa: F401  # Ensures .env files are loaded before reading os.e
 logger = logging.getLogger(__name__)
 
 DEFAULT_SOURCE_SYSTEM = "beo_generator"
+DEFAULT_BEO_DOCUMENT_ENDPOINT = "/api/v1/beo-documents"
 DEFAULT_IMPORT_ENDPOINT = "/api/v1/events/import"
 DEFAULT_TIMEOUT_SECONDS = 30
 DEFAULT_EVENT_STATUS = "on_time"
@@ -30,6 +31,17 @@ class OpsImportResult:
     status_code: int | None
     job_id: str
     message: str
+    response_body: Any = None
+    beo_document: dict[str, Any] | None = None
+
+
+@dataclass(slots=True)
+class BeoDocumentUploadResult:
+    attempted: bool
+    success: bool
+    status_code: int | None
+    message: str
+    document: dict[str, Any] | None = None
     response_body: Any = None
 
 
@@ -79,11 +91,30 @@ def upload_events_to_ops(
             "OPS upload skipped because base URL or token is missing.",
         )
 
+    beo_upload_result = _upload_beo_document_for_events(
+        events,
+        source_file=source_file,
+        base_url=base_url,
+        token=token,
+        timeout_seconds=timeout_seconds,
+    )
+    if source_file and str(source_file).lower().endswith(".pdf") and not beo_upload_result.success:
+        return OpsImportResult(
+            beo_upload_result.attempted,
+            False,
+            beo_upload_result.status_code,
+            job_id,
+            f"OPS upload skipped because BEO document upload failed: {beo_upload_result.message}",
+            beo_upload_result.response_body,
+            beo_document=beo_upload_result.document,
+        )
+
     payload = build_ops_import_payload(
         events,
         source_file=source_file,
         job_id=job_id,
         source_system=source_system,
+        beo_document=beo_upload_result.document,
     )
     url = f"{base_url.rstrip('/')}{DEFAULT_IMPORT_ENDPOINT}"
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -111,6 +142,7 @@ def upload_events_to_ops(
                 job_id,
                 "OPS upload completed.",
                 parsed_body,
+                beo_document=beo_upload_result.document,
             )
     except error.HTTPError as exc:
         raw_body = exc.read().decode("utf-8", errors="replace")
@@ -128,6 +160,7 @@ def upload_events_to_ops(
             job_id,
             f"OPS upload failed with HTTP {exc.code}.",
             parsed_body,
+            beo_document=beo_upload_result.document,
         )
     except error.URLError as exc:
         logger.error("OPS events import failed with network error. job_id=%s reason=%s", job_id, exc.reason)
@@ -137,6 +170,7 @@ def upload_events_to_ops(
             None,
             job_id,
             f"OPS upload failed with network error: {exc.reason}",
+            beo_document=beo_upload_result.document,
         )
 
 
@@ -146,6 +180,7 @@ def build_ops_import_payload(
     source_file: str | None = None,
     job_id: str | None = None,
     source_system: str = DEFAULT_SOURCE_SYSTEM,
+    beo_document: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     resolved_job_id = job_id or str(uuid.uuid4())
     return {
@@ -154,17 +189,30 @@ def build_ops_import_payload(
             "job_id": resolved_job_id,
             "source_file": source_file,
         },
-        "events": [_normalize_event_for_ops(event, source_file=source_file) for event in events],
+        "events": [
+            _normalize_event_for_ops(event, source_file=source_file, beo_document=beo_document)
+            for event in events
+        ],
     }
 
 
-def _normalize_event_for_ops(event: dict[str, Any], *, source_file: str | None = None) -> dict[str, Any]:
+def _normalize_event_for_ops(
+    event: dict[str, Any],
+    *,
+    source_file: str | None = None,
+    beo_document: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if "service" in event and "beo" in event:
-        return _normalize_standard_event(event, source_file=source_file)
-    return _normalize_legacy_event(event, source_file=source_file)
+        return _normalize_standard_event(event, source_file=source_file, beo_document=beo_document)
+    return _normalize_legacy_event(event, source_file=source_file, beo_document=beo_document)
 
 
-def _normalize_standard_event(event: dict[str, Any], *, source_file: str | None = None) -> dict[str, Any]:
+def _normalize_standard_event(
+    event: dict[str, Any],
+    *,
+    source_file: str | None = None,
+    beo_document: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     normalized = dict(event)
     normalized["status"] = DEFAULT_EVENT_STATUS
     normalized["quote"] = event.get("quote")
@@ -185,12 +233,18 @@ def _normalize_standard_event(event: dict[str, Any], *, source_file: str | None 
     source_trace.setdefault("document_id", event.get("event_order"))
     source_trace.setdefault("file_name", Path(source_file).name if source_file else None)
     normalized["source_trace"] = source_trace
+    _attach_beo_document_reference(normalized, source_file=source_file, beo_document=beo_document)
     normalized["identity"] = _build_identity(normalized)
     normalized["revision_context"] = _build_revision_context(normalized, source_file=source_file)
     return normalized
 
 
-def _normalize_legacy_event(event: dict[str, Any], *, source_file: str | None = None) -> dict[str, Any]:
+def _normalize_legacy_event(
+    event: dict[str, Any],
+    *,
+    source_file: str | None = None,
+    beo_document: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     raw_details = event.get("details", {}) if isinstance(event.get("details"), dict) else {}
     normalized = {
         "event_order": str(event.get("event_order") or ""),
@@ -238,9 +292,292 @@ def _normalize_legacy_event(event: dict[str, Any], *, source_file: str | None = 
             "file_name": Path(source_file).name if source_file else None,
         },
     }
+    _attach_beo_document_reference(normalized, source_file=source_file, beo_document=beo_document)
     normalized["identity"] = _build_identity(normalized)
     normalized["revision_context"] = _build_revision_context(normalized, source_file=source_file)
     return normalized
+
+
+def _upload_beo_document_for_events(
+    events: list[dict[str, Any]],
+    *,
+    source_file: str | None,
+    base_url: str,
+    token: str,
+    timeout_seconds: int,
+) -> BeoDocumentUploadResult:
+    if not source_file:
+        return BeoDocumentUploadResult(False, True, None, "BEO document upload skipped because source_file is missing.")
+    source_path = Path(source_file)
+    if source_path.suffix.lower() != ".pdf":
+        return BeoDocumentUploadResult(False, True, None, "BEO document upload skipped because source_file is not a PDF.")
+    if not source_path.exists():
+        return BeoDocumentUploadResult(False, False, None, f"BEO PDF not found at {source_file}.")
+
+    document_type, revision_number = _extract_beo_upload_metadata(events, source_file=source_file)
+    if document_type not in {"original", "revision", "popup"}:
+        return BeoDocumentUploadResult(False, False, None, f"Invalid BEO document_type: {document_type!r}.")
+    if revision_number < 0:
+        return BeoDocumentUploadResult(False, False, None, f"Invalid BEO revision_number: {revision_number}.")
+
+    return upload_beo_document(
+        source_file,
+        document_type=document_type,
+        revision_number=revision_number,
+        metadata=_build_beo_upload_metadata(
+            source_path,
+            document_type=document_type,
+            revision_number=revision_number,
+        ),
+        base_url=base_url,
+        token=token,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def upload_beo_document(
+    pdf_path: str,
+    *,
+    document_type: str,
+    revision_number: int,
+    status: str | None = None,
+    metadata: dict[str, Any] | None = None,
+    base_url: str | None = None,
+    token: str | None = None,
+    timeout_seconds: int | None = None,
+) -> BeoDocumentUploadResult:
+    resolved_base_url = (base_url or os.getenv("OPS_EVENTS_API_BASE_URL", "")).strip()
+    resolved_token = (token or os.getenv("OPS_EVENTS_API_TOKEN", "")).strip()
+    resolved_timeout = timeout_seconds or _read_int_env("OPS_EVENTS_API_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS)
+    source_path = Path(pdf_path)
+
+    if source_path.suffix.lower() != ".pdf":
+        return BeoDocumentUploadResult(False, False, None, "BEO document upload requires a PDF file.")
+    if not resolved_base_url or not resolved_token:
+        return BeoDocumentUploadResult(False, False, None, "BEO document upload skipped because base URL or token is missing.")
+    if not source_path.exists():
+        return BeoDocumentUploadResult(False, False, None, f"BEO PDF not found at {pdf_path}.")
+
+    body, content_type = _build_beo_upload_request_body(
+        source_path,
+        document_type=document_type,
+        revision_number=revision_number,
+        status=status,
+        metadata=metadata,
+    )
+    headers = {
+        "Authorization": f"Bearer {resolved_token}",
+        "Content-Type": content_type,
+        "Accept": "application/json",
+    }
+    url = f"{resolved_base_url.rstrip('/')}{DEFAULT_BEO_DOCUMENT_ENDPOINT}"
+    req = request.Request(url, data=body, headers=headers, method="POST")
+
+    try:
+        with request.urlopen(req, timeout=resolved_timeout) as response:
+            raw_body = response.read().decode("utf-8")
+            parsed_body = _decode_json_body(raw_body)
+            document = parsed_body if isinstance(parsed_body, dict) else None
+            logger.info(
+                "BEO document upload succeeded. file=%s document_id=%s type=%s revision_number=%s status=%s",
+                source_path.name,
+                document.get("id") if isinstance(document, dict) else None,
+                document_type,
+                revision_number,
+                response.status,
+            )
+            return BeoDocumentUploadResult(
+                True,
+                200 <= response.status < 300,
+                response.status,
+                "BEO document upload completed.",
+                document=document,
+                response_body=parsed_body,
+            )
+    except error.HTTPError as exc:
+        raw_body = exc.read().decode("utf-8", errors="replace")
+        parsed_body = _decode_json_body(raw_body)
+        logger.error(
+            "BEO document upload failed with HTTP error. file=%s type=%s revision_number=%s status=%s body=%s",
+            source_path.name,
+            document_type,
+            revision_number,
+            exc.code,
+            raw_body,
+        )
+        return BeoDocumentUploadResult(
+            True,
+            False,
+            exc.code,
+            f"BEO document upload failed with HTTP {exc.code}.",
+            response_body=parsed_body,
+        )
+    except error.URLError as exc:
+        logger.error(
+            "BEO document upload failed with network error. file=%s type=%s revision_number=%s reason=%s",
+            source_path.name,
+            document_type,
+            revision_number,
+            exc.reason,
+        )
+        return BeoDocumentUploadResult(
+            True,
+            False,
+            None,
+            f"BEO document upload failed with network error: {exc.reason}",
+        )
+
+
+def _build_beo_upload_request_body(
+    source_path: Path,
+    *,
+    document_type: str,
+    revision_number: int,
+    status: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> tuple[bytes, str]:
+    boundary = f"----CodexBoundary{uuid.uuid4().hex}"
+    line_break = b"\r\n"
+    chunks: list[bytes] = []
+
+    def add_text_field(name: str, value: str) -> None:
+        chunks.extend(
+            [
+                f"--{boundary}".encode("utf-8"),
+                f'Content-Disposition: form-data; name="{name}"'.encode("utf-8"),
+                b"",
+                value.encode("utf-8"),
+            ]
+        )
+
+    def add_file_field(name: str, path: Path) -> None:
+        chunks.extend(
+            [
+                f"--{boundary}".encode("utf-8"),
+                f'Content-Disposition: form-data; name="{name}"; filename="{path.name}"'.encode("utf-8"),
+                b"Content-Type: application/pdf",
+                b"",
+                path.read_bytes(),
+            ]
+        )
+
+    add_text_field("document_type", document_type)
+    add_text_field("revision_number", str(revision_number))
+    if status:
+        add_text_field("status", status)
+    if metadata:
+        for key, value in metadata.items():
+            if value is None:
+                continue
+            add_text_field(f"metadata[{key}]", str(value))
+    add_file_field("file", source_path)
+    chunks.append(f"--{boundary}--".encode("utf-8"))
+    chunks.append(b"")
+    return line_break.join(chunks), f"multipart/form-data; boundary={boundary}"
+
+
+def _extract_beo_upload_metadata(events: list[dict[str, Any]], *, source_file: str | None) -> tuple[str, int]:
+    if events:
+        beo = events[0].get("beo") if isinstance(events[0].get("beo"), dict) else {}
+        beo_type = str(beo.get("type") or "").strip().lower()
+        revision_number = _coerce_int(beo.get("revision_number"))
+        if beo_type:
+            return beo_type, revision_number
+    return _infer_beo_metadata_from_file_name(source_file)
+
+
+def _build_beo_upload_metadata(
+    source_path: Path,
+    *,
+    document_type: str,
+    revision_number: int,
+) -> dict[str, Any]:
+    detected_label = document_type if revision_number <= 0 else f"{document_type} {revision_number}"
+    extractor_version = os.getenv("OPS_EVENTS_EXTRACTOR_VERSION", "event_extractor")
+    return {
+        "source_path": str(source_path.resolve()),
+        "extractor_version": extractor_version,
+        "detected_label": detected_label,
+        "original_filename": source_path.name,
+    }
+
+
+def _infer_beo_metadata_from_file_name(source_file: str | None) -> tuple[str, int]:
+    file_name = Path(source_file).name.lower() if source_file else ""
+    if "popup" in file_name or "pop-up" in file_name:
+        return "popup", _extract_revision_number_from_text(file_name)
+    if "revision" in file_name or "revised" in file_name or "revisions" in file_name:
+        return "revision", _extract_revision_number_from_text(file_name)
+    return "original", 0
+
+
+def _extract_revision_number_from_text(value: str) -> int:
+    match = re.search(r"(?:rev(?:ision)?\D*)(\d+)", value, re.IGNORECASE)
+    return int(match.group(1)) if match else 0
+
+
+def _attach_beo_document_reference(
+    event: dict[str, Any],
+    *,
+    source_file: str | None,
+    beo_document: dict[str, Any] | None,
+) -> None:
+    beo = dict(event.get("beo") or {})
+    page_start, page_end = _extract_page_bounds(event, beo=beo)
+    document_id = beo_document.get("id") if isinstance(beo_document, dict) else None
+    file_name = (
+        beo.get("file_name")
+        or (beo_document.get("file_name") if isinstance(beo_document, dict) else None)
+        or (Path(source_file).name if source_file else None)
+    )
+    revision_number = _coerce_int(beo.get("revision_number"))
+    document_type = str(beo.get("type") or "original").strip().lower() or "original"
+
+    if document_id is not None:
+        event["beo_document_id"] = document_id
+    event["beo_page_start"] = page_start
+    if page_end is not None:
+        event["beo_page_end"] = page_end
+
+    beo["type"] = document_type
+    beo["revision_number"] = revision_number
+    beo["file_name"] = file_name
+    beo["page_start"] = page_start
+    if page_end is not None:
+        beo["page_end"] = page_end
+    event["beo"] = beo
+
+
+def _extract_page_bounds(event: dict[str, Any], *, beo: dict[str, Any] | None = None) -> tuple[int | None, int | None]:
+    resolved_beo = beo if isinstance(beo, dict) else {}
+    explicit_start = _coerce_optional_int(resolved_beo.get("page_start") or event.get("beo_page_start"))
+    explicit_end = _coerce_optional_int(resolved_beo.get("page_end") or event.get("beo_page_end"))
+    if explicit_start is not None:
+        return explicit_start, explicit_end if explicit_end is not None else explicit_start
+
+    source_trace = event.get("source_trace") if isinstance(event.get("source_trace"), dict) else {}
+    page_ranges = source_trace.get("page_ranges") if isinstance(source_trace.get("page_ranges"), list) else []
+    pages: list[int] = []
+    for page_range in page_ranges:
+        text = str(page_range or "").strip()
+        if not text:
+            continue
+        match = re.fullmatch(r"(\d+)(?:\s*-\s*(\d+))?", text)
+        if not match:
+            continue
+        start = int(match.group(1))
+        end = int(match.group(2)) if match.group(2) else start
+        pages.extend(range(start, end + 1))
+    if not pages:
+        return None, None
+    return min(pages), max(pages)
+
+
+def _coerce_optional_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _normalize_date(value: Any) -> str | None:

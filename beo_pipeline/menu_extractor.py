@@ -58,6 +58,8 @@ NOISE_PATTERNS = (
     r"^drinks only$",
     r"^after dinner$",
     r"^\**\s*\(.+\)\s+.*bar.+move into ballroom$",
+    r"^\**\s*dietary needs in food header below:?$",
+    r"^[o]\s*(?:\(cid:\d+\))?\s*(?:breakfast|lunch|dinner)\s+options\s+for\s+dr\.?\s+.+:?$",
 )
 CONTRACTUAL_NOISE_PATTERNS = (
     r"^guarantees are required\b",
@@ -239,6 +241,8 @@ def extract_dietary_restrictions(raw_block: str) -> tuple[str, list[dict[str, An
         if collecting:
             if not line:
                 continue
+            if _is_noise(line):
+                continue
             if _looks_like_block_header(line) or lower.startswith("room setup"):
                 collecting = False
                 cleaned_lines.append(raw_line)
@@ -268,8 +272,19 @@ def extract_menu_sections(raw_block: str) -> list[MenuSection]:
 
     sections: list[MenuSection] = []
     current: MenuSection | None = None
+    skipping_dietary_guidance = False
 
     for line in lines:
+        if _is_dietary_guidance_header(line):
+            skipping_dietary_guidance = True
+            continue
+
+        if skipping_dietary_guidance:
+            if _looks_like_block_header(line) or _ends_dietary_guidance_block(line):
+                skipping_dietary_guidance = False
+            else:
+                continue
+
         if _is_pending_placeholder(line):
             continue
 
@@ -406,7 +421,7 @@ def extract_menu_sections(raw_block: str) -> list[MenuSection]:
 
 
 def _parse_dietary_restriction_line(line: str) -> dict[str, Any] | None:
-    match = re.match(r"^(?P<restrictions>.+?)\s*-\s*(?P<guest>[^-][^-]*)$", line)
+    match = re.match(r"^(?P<restrictions>.+?)\s+-\s+(?P<guest>.+)$", line)
     if not match:
         return None
     restriction_text = match.group("restrictions").strip(" ,")
@@ -451,7 +466,10 @@ def derive_menu_style(raw_block: str, sections: list[MenuSection]) -> str | None
 
 
 def _clean_line(line: str) -> str:
-    return " ".join((line or "").replace("\t", " ").replace("**", " ").split()).strip()
+    cleaned = (line or "").replace("\t", " ").replace("**", " ")
+    cleaned = re.sub(r"[•]", " ", cleaned)
+    cleaned = re.sub(r"\(cid:\d+\)", " ", cleaned)
+    return " ".join(cleaned.split()).strip()
 
 
 def _is_noise(line: str) -> bool:
@@ -465,6 +483,24 @@ def _is_noise(line: str) -> bool:
 
 def _looks_like_block_header(line: str) -> bool:
     return bool(re.match(r"^\d{1,2}:\d{2}\s*[AP]M\b", line, re.IGNORECASE))
+
+
+def _is_dietary_guidance_header(line: str) -> bool:
+    lower = line.strip().lower()
+    if re.fullmatch(r"\**\s*dietary needs in food header below:?", lower):
+        return True
+    return bool(re.fullmatch(r"(breakfast|lunch|dinner)\s+options\s+for\s+dr\.?\s+.+:?", lower))
+
+
+def _ends_dietary_guidance_block(line: str) -> bool:
+    lower = line.strip().lower()
+    return bool(
+        re.fullmatch(r"\$\d[\d.,]*(?:\s*per\s+person)?", lower)
+        or lower.startswith("room setup")
+        or lower.startswith("arrangements")
+        or lower.startswith("dietary restrictions")
+        or lower.startswith("food ")
+    )
 
 
 def _looks_like_title(line: str) -> bool:

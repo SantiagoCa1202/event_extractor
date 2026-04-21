@@ -1,7 +1,9 @@
 import json
 import os
+import tempfile
 import unittest
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -16,6 +18,9 @@ STANDARD_EVENT = {
     "beo": {
         "type": "original",
         "revision_number": 0,
+        "file_name": "sample.pdf",
+        "page_start": 13,
+        "page_end": 13,
     },
     "service": {
         "function": "Meeting",
@@ -98,6 +103,9 @@ class OpsEventsApiTests(unittest.TestCase):
         self.assertEqual(event["revision_context"]["beo_type"], "original")
         self.assertEqual(event["revision_context"]["revision_number"], 0)
         self.assertFalse(event["revision_context"]["is_revision"])
+        self.assertEqual(event["beo_page_start"], 13)
+        self.assertEqual(event["beo_page_end"], 13)
+        self.assertEqual(event["beo"]["file_name"], "sample.pdf")
         self.assertEqual(
             event["revision_context"]["document_version_key"],
             "528954|original|0|sample.pdf",
@@ -114,22 +122,51 @@ class OpsEventsApiTests(unittest.TestCase):
     )
     @patch("ops_events_api.request.urlopen")
     def test_upload_events_to_ops_posts_expected_payload(self, mocked_urlopen) -> None:
-        mocked_urlopen.return_value = FakeResponse(202, {"result": "accepted"})
-        result = upload_events_to_ops(
-            [STANDARD_EVENT],
-            source_file=r"C:\imports\sample.pdf",
-            job_id="job-456",
-        )
+        mocked_urlopen.side_effect = [
+            FakeResponse(
+                201,
+                {
+                    "id": "beo-doc-123",
+                    "file_name": "sample.pdf",
+                    "file_url": "https://ops.example.com/files/sample.pdf",
+                    "document_type": "original",
+                    "revision_number": 0,
+                },
+            ),
+            FakeResponse(202, {"result": "accepted"}),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pdf_path = Path(temp_dir) / "sample.pdf"
+            pdf_path.write_bytes(b"%PDF-1.4\n%fake\n")
+            result = upload_events_to_ops(
+                [STANDARD_EVENT],
+                source_file=str(pdf_path),
+                job_id="job-456",
+            )
 
         self.assertTrue(result.attempted)
         self.assertTrue(result.success)
-        req = mocked_urlopen.call_args.args[0]
-        body = json.loads(req.data.decode("utf-8"))
-        self.assertEqual(req.full_url, "https://ops.example.com/api/v1/events/import")
-        self.assertEqual(req.get_header("Authorization"), "Bearer secret-token")
-        self.assertEqual(body["meta"]["job_id"], "job-456")
-        self.assertEqual(body["events"][0]["service"]["time"]["start"], "12:00")
-        self.assertTrue(body["events"][0]["identity"]["event_instance_key"].startswith("528954|"))
+        upload_req = mocked_urlopen.call_args_list[0].args[0]
+        import_req = mocked_urlopen.call_args_list[1].args[0]
+        import_body = json.loads(import_req.data.decode("utf-8"))
+        upload_body = upload_req.data.decode("utf-8", errors="replace")
+        self.assertEqual(upload_req.full_url, "https://ops.example.com/api/v1/beo-documents")
+        self.assertEqual(import_req.full_url, "https://ops.example.com/api/v1/events/import")
+        self.assertEqual(import_req.get_header("Authorization"), "Bearer secret-token")
+        self.assertIn('name="document_type"', upload_body)
+        self.assertIn("original", upload_body)
+        self.assertIn('name="revision_number"', upload_body)
+        self.assertIn('name="metadata[source_path]"', upload_body)
+        self.assertIn('name="metadata[extractor_version]"', upload_body)
+        self.assertIn('name="metadata[detected_label]"', upload_body)
+        self.assertIn('name="metadata[original_filename]"', upload_body)
+        self.assertIn("sample.pdf", upload_body)
+        self.assertEqual(import_body["meta"]["job_id"], "job-456")
+        self.assertEqual(import_body["events"][0]["service"]["time"]["start"], "12:00")
+        self.assertEqual(import_body["events"][0]["beo_document_id"], "beo-doc-123")
+        self.assertEqual(import_body["events"][0]["beo_page_start"], 13)
+        self.assertEqual(import_body["events"][0]["beo"]["file_name"], "sample.pdf")
+        self.assertTrue(import_body["events"][0]["identity"]["event_instance_key"].startswith("528954|"))
 
     def test_build_payload_sanitizes_bad_room_and_shortens_identity_key(self) -> None:
         broken_event = {
@@ -148,6 +185,28 @@ class OpsEventsApiTests(unittest.TestCase):
         event = payload["events"][0]
         self.assertEqual(event["service"]["room"], "Carolina Ballroom")
         self.assertLessEqual(len(event["identity"]["event_instance_key"]), 32)
+
+    def test_build_payload_derives_page_bounds_from_source_trace(self) -> None:
+        event_without_explicit_pages = {
+            **STANDARD_EVENT,
+            "beo": {
+                "type": "revision",
+                "revision_number": 2,
+            },
+            "source_trace": {
+                **STANDARD_EVENT["source_trace"],
+                "page_ranges": ["3-4"],
+            },
+        }
+
+        payload = build_ops_import_payload([event_without_explicit_pages], source_file="sample.pdf")
+
+        event = payload["events"][0]
+        self.assertEqual(event["beo_page_start"], 3)
+        self.assertEqual(event["beo_page_end"], 4)
+        self.assertEqual(event["beo"]["page_start"], 3)
+        self.assertEqual(event["beo"]["page_end"], 4)
+        self.assertEqual(event["beo"]["revision_number"], 2)
 
     def test_upload_events_to_ops_skips_when_unknown_items_remain(self) -> None:
         unresolved_event = {
@@ -233,15 +292,31 @@ class OpsEventsApiTests(unittest.TestCase):
     )
     @patch("ops_events_api.request.urlopen")
     def test_upload_events_to_ops_handles_http_error(self, mocked_urlopen) -> None:
-        mocked_urlopen.side_effect = HTTPError(
-            url="https://ops.example.com/api/v1/events/import",
-            code=422,
-            msg="unprocessable",
-            hdrs=None,
-            fp=BytesIO(b'{\"message\":\"invalid payload\"}'),
-        )
-        result = upload_events_to_ops([STANDARD_EVENT], source_file="sample.pdf", job_id="job-789")
+        mocked_urlopen.side_effect = [
+            FakeResponse(
+                201,
+                {
+                    "id": "beo-doc-123",
+                    "file_name": "sample.pdf",
+                    "file_url": "https://ops.example.com/files/sample.pdf",
+                    "document_type": "original",
+                    "revision_number": 0,
+                },
+            ),
+            HTTPError(
+                url="https://ops.example.com/api/v1/events/import",
+                code=422,
+                msg="unprocessable",
+                hdrs=None,
+                fp=BytesIO(b'{\"message\":\"invalid payload\"}'),
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pdf_path = Path(temp_dir) / "sample.pdf"
+            pdf_path.write_bytes(b"%PDF-1.4\n%fake\n")
+            result = upload_events_to_ops([STANDARD_EVENT], source_file=str(pdf_path), job_id="job-789")
         self.assertTrue(result.attempted)
         self.assertFalse(result.success)
         self.assertEqual(result.status_code, 422)
         self.assertEqual(result.response_body["message"], "invalid payload")
+        self.assertEqual(result.beo_document["id"], "beo-doc-123")

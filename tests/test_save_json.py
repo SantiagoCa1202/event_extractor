@@ -84,7 +84,18 @@ class SaveJsonTests(unittest.TestCase):
     @patch("builtins.input", return_value="n")
     @patch("save_json.upload_events_to_ops")
     def test_save_json_continues_upload_when_user_declines_review(self, mocked_upload, _mocked_input) -> None:
-        mocked_upload.return_value = OpsImportResult(True, True, 202, "job-continue", "completed")
+        mocked_upload.return_value = OpsImportResult(
+            True,
+            True,
+            202,
+            "job-continue",
+            "completed",
+            beo_document={
+                "id": 15,
+                "document_type": "revision",
+                "revision_number": 2,
+            },
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = Path(temp_dir) / "events.json"
@@ -93,6 +104,11 @@ class SaveJsonTests(unittest.TestCase):
 
             mocked_upload.assert_called_once()
             self.assertTrue(mocked_upload.call_args.kwargs["allow_unresolved_unknowns"])
+            logs_dir = Path(temp_dir) / "logs"
+            log_path = next(logs_dir.glob("events_*.log"))
+            log_text = log_path.read_text(encoding="utf-8")
+            self.assertIn("BEO document linked. id=15", log_text)
+            self.assertIn("revision_number=2", log_text)
 
 
 if __name__ == "__main__":

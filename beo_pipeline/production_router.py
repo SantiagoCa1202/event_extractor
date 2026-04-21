@@ -189,6 +189,7 @@ COLD_ITEM_RULES = {
     "buttermilk herb dip": "exact_item_rule",
     "pickled jalapenos": "exact_item_rule",
     "tomatoes": "exact_item_rule",
+    "tomato": "exact_item_rule",
     "green onion": "exact_item_rule",
     "sour cream": "exact_item_rule",
     "corn relish": "exact_item_rule",
@@ -246,6 +247,7 @@ COLD_ITEM_RULES = {
     "assorted whole fruit by the dozen": "exact_item_rule",
     "assorted whole fruit dozen": "exact_item_rule",
     "black bean salad": "exact_item_rule",
+    "corn & black bean salad": "exact_item_rule",
     "bread and crackers": "exact_item_rule",
     "cheesecake": "exact_item_rule",
     "chefs choice house salad": "exact_item_rule",
@@ -450,6 +452,14 @@ def _classify_item(section: dict, item: dict) -> dict:
         return _build_production_area("cold_kitchen", "high", "source_text_rule:popcorn_variant")
     if "popcorn" in source_text and item_name in {"butter", "jalapeno", "kettle"}:
         return _build_production_area("cold_kitchen", "high", "source_text_rule:popcorn_flavor")
+    if item_name in {"tomato", "onion"} and any(
+        marker in source_text
+        for marker in (
+            "shredded cheese, lettuce, tomato, onion, salsa",
+            "condiments: tomato, onion, pickle spears, lettuce",
+        )
+    ):
+        return _build_production_area("cold_kitchen", "high", "source_text_rule:condiment_bundle")
     if (section_title, item_name) in HOT_CONTEXT_RULES:
         return _build_production_area("hot_kitchen", "medium", HOT_CONTEXT_RULES[(section_title, item_name)])
     if (section_title, item_name) in COLD_CONTEXT_RULES:

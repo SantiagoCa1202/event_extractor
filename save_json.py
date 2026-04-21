@@ -54,6 +54,15 @@ def save_json(
                 source_file=source_file or output_path,
                 allow_unresolved_unknowns=allow_upload_with_inconsistencies,
             )
+            if result.beo_document:
+                document = result.beo_document
+                log_lines.append(
+                    "BEO document linked. "
+                    f"id={document.get('id')} "
+                    f"type={document.get('document_type') or document.get('type')} "
+                    f"revision_number={document.get('revision_number')} "
+                    f"events={len(data)}"
+                )
             if not result.attempted:
                 log_lines.append(f"OPS upload omitido. job_id={result.job_id} motivo={result.message}")
             elif result.success:

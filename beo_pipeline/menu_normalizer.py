@@ -70,6 +70,7 @@ def _should_keep_whole(value: str) -> bool:
         "garlic & chili broccolini",
         "creamy mac & cheese",
         "macaroni & cheese bites",
+        "corn & black bean salad",
         "badass bobs pretzels with whole grain mustard",
         "hazel nut crunch cake & brule cheesecake",
         "pimento cheese & pickled shrimp bruschetta crostini",

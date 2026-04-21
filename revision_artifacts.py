@@ -264,9 +264,22 @@ def _diff_event_fields(previous_event: dict[str, Any], current_event: dict[str, 
         "tags",
         "beo",
     ]:
-        if previous_event.get(field_name) != current_event.get(field_name):
+        previous_value = previous_event.get(field_name)
+        current_value = current_event.get(field_name)
+        if field_name == "beo":
+            previous_value = _normalize_beo_for_revision_diff(previous_value)
+            current_value = _normalize_beo_for_revision_diff(current_value)
+        if previous_value != current_value:
             changed_fields.append(field_name)
     return changed_fields
+
+
+def _normalize_beo_for_revision_diff(value: Any) -> dict[str, Any]:
+    beo = value if isinstance(value, dict) else {}
+    return {
+        "type": beo.get("type"),
+        "revision_number": beo.get("revision_number"),
+    }
 
 
 def _menu_fingerprint(event: dict[str, Any]) -> str | None:

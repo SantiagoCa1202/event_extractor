@@ -972,12 +972,15 @@ class ProductionRouterTests(unittest.TestCase):
                 "service_role": "other",
                 "course_type": "other",
                 "items": [
+                    {"name": "Corn & Black Bean Salad"},
                     {"name": "Black Bean Salad"},
                     {"name": "Beans"},
                     {"name": "Buttered Noodles"},
                     {"name": "Hard and Soft Taco Shells"},
                     {"name": "Salsa"},
                     {"name": "Shredded Cheese"},
+                    {"name": "Tomato", "source_text": "Shredded Cheese, Lettuce, Tomato, Onion, Salsa"},
+                    {"name": "Onion", "source_text": "Shredded Cheese, Lettuce, Tomato, Onion, Salsa"},
                 ],
             },
             {
@@ -994,13 +997,32 @@ class ProductionRouterTests(unittest.TestCase):
         ]
         annotated = annotate_menu_sections_with_production(sections)
         custom = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(custom["Corn & Black Bean Salad"], "cold_kitchen")
         self.assertEqual(custom["Black Bean Salad"], "cold_kitchen")
         self.assertEqual(custom["Beans"], "hot_kitchen")
         self.assertEqual(custom["Buttered Noodles"], "hot_kitchen")
         self.assertEqual(custom["Hard and Soft Taco Shells"], "hot_kitchen")
         self.assertEqual(custom["Salsa"], "cold_kitchen")
         self.assertEqual(custom["Shredded Cheese"], "cold_kitchen")
+        self.assertEqual(custom["Tomato"], "cold_kitchen")
+        self.assertEqual(custom["Onion"], "cold_kitchen")
         self.assertEqual(annotated[1]["items"], [])
+
+    def test_does_not_route_dietary_restriction_onion_as_cold_food(self) -> None:
+        sections = [
+            {
+                "title": "Items",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Onion", "source_text": "Gluten, Garlic, Onion, Cashew, Shellfish, Beef - Suzan H."},
+                ],
+            }
+        ]
+        annotated = annotate_menu_sections_with_production(sections)
+        item = annotated[0]["items"][0]
+        self.assertEqual(item["production_area"]["temperature_zone"], "unknown")
 
 
 if __name__ == "__main__":
