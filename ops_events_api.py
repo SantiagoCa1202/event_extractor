@@ -183,16 +183,18 @@ def build_ops_import_payload(
     beo_document: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     resolved_job_id = job_id or str(uuid.uuid4())
+    normalized_events = [
+        _normalize_event_for_ops(event, source_file=source_file, beo_document=beo_document)
+        for event in events
+    ]
+    _backfill_missing_service_rooms(normalized_events)
     return {
         "source_system": source_system,
         "meta": {
             "job_id": resolved_job_id,
             "source_file": source_file,
         },
-        "events": [
-            _normalize_event_for_ops(event, source_file=source_file, beo_document=beo_document)
-            for event in events
-        ],
+        "events": normalized_events,
     }
 
 
@@ -758,6 +760,72 @@ def _coerce_int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _backfill_missing_service_rooms(events: list[dict[str, Any]]) -> None:
+    for event in events:
+        service = event.get("service") if isinstance(event.get("service"), dict) else None
+        if not isinstance(service, dict) or service.get("room"):
+            continue
+
+        sibling_room = _find_sibling_room(events, event)
+        if sibling_room:
+            service["room"] = sibling_room
+
+
+def _find_sibling_room(events: list[dict[str, Any]], target: dict[str, Any]) -> str | None:
+    target_event_order = str(target.get("event_order") or "").strip()
+    target_date = target.get("date")
+    target_org = target.get("organization")
+    target_service = target.get("service") if isinstance(target.get("service"), dict) else {}
+    target_function = (target_service.get("function") if isinstance(target_service, dict) else None) or ""
+    target_start = ((target_service.get("time") or {}).get("start") if isinstance(target_service, dict) else None) or ""
+    target_minutes = _minutes_from_hhmm(str(target_start))
+
+    candidates: list[tuple[int, str]] = []
+    for sibling in events:
+        if sibling is target:
+            continue
+        if str(sibling.get("event_order") or "").strip() != target_event_order:
+            continue
+        if sibling.get("date") != target_date or sibling.get("organization") != target_org:
+            continue
+
+        sibling_service = sibling.get("service") if isinstance(sibling.get("service"), dict) else {}
+        sibling_room = sibling_service.get("room") if isinstance(sibling_service, dict) else None
+        sibling_function = (sibling_service.get("function") if isinstance(sibling_service, dict) else None) or ""
+        if not sibling_room:
+            continue
+
+        score = 0
+        if sibling_function != target_function:
+            score += 10_000
+
+        sibling_start = ((sibling_service.get("time") or {}).get("start") if isinstance(sibling_service, dict) else None) or ""
+        sibling_minutes = _minutes_from_hhmm(str(sibling_start))
+        if target_minutes is not None and sibling_minutes is not None:
+            score += abs(target_minutes - sibling_minutes)
+        elif sibling_minutes is not None:
+            score += 500
+        else:
+            score += 1_000
+
+        candidates.append((score, str(sibling_room)))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[0])
+    return candidates[0][1]
+
+
+def _minutes_from_hhmm(value: str | None) -> int | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    match = re.fullmatch(r"(\d{2}):(\d{2})", text)
+    if not match:
+        return None
+    return int(match.group(1)) * 60 + int(match.group(2))
 
 
 def _decode_json_body(raw_body: str) -> Any:

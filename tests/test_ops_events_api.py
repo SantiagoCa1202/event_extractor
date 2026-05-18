@@ -208,6 +208,40 @@ class OpsEventsApiTests(unittest.TestCase):
         self.assertEqual(event["beo"]["page_end"], 4)
         self.assertEqual(event["beo"]["revision_number"], 2)
 
+    def test_build_payload_backfills_missing_room_from_sibling_event(self) -> None:
+        earlier_dinner = {
+            **STANDARD_EVENT,
+            "event_order": "531128",
+            "date": "May 09, 2026",
+            "organization": "CLTWS in House Account",
+            "service": {
+                **STANDARD_EVENT["service"],
+                "function": "Dinner",
+                "time": {"start": "7:00 PM", "end": None},
+                "room": "Symphony Ballroom",
+            },
+        }
+        later_dinner_missing_room = {
+            **STANDARD_EVENT,
+            "event_order": "531128",
+            "date": "May 09, 2026",
+            "organization": "CLTWS in House Account",
+            "service": {
+                **STANDARD_EVENT["service"],
+                "function": "Dinner",
+                "time": {"start": "8:00 PM", "end": None},
+                "room": None,
+            },
+            "details": {
+                **STANDARD_EVENT["details"],
+                "raw": "8:00 PM Dinner\n(350) Chicken Tenders @ $8 Each",
+            },
+        }
+
+        payload = build_ops_import_payload([earlier_dinner, later_dinner_missing_room], source_file="sample.pdf")
+
+        self.assertEqual(payload["events"][1]["service"]["room"], "Symphony Ballroom")
+
     def test_upload_events_to_ops_skips_when_unknown_items_remain(self) -> None:
         unresolved_event = {
             **STANDARD_EVENT,
@@ -219,6 +253,7 @@ class OpsEventsApiTests(unittest.TestCase):
                         "operational_split": {
                             "hot_kitchen_items": [],
                             "cold_kitchen_items": [],
+                            "dietary_items": [],
                             "unknown_items": ["Mystery Item"],
                         },
                     }
@@ -253,6 +288,7 @@ class OpsEventsApiTests(unittest.TestCase):
                         "operational_split": {
                             "hot_kitchen_items": [],
                             "cold_kitchen_items": [],
+                            "dietary_items": [],
                             "unknown_items": ["Mystery Item"],
                         },
                     }

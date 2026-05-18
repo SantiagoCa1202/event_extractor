@@ -7,11 +7,10 @@ from datetime import datetime, timedelta
 import pytesseract
 from functions import clasificar_por_menu, clean_details
 from functions import clasificar_waste_items
-from config import TESSERACT_CMD
+from config import TESSERACT_CMD, include_all_event_functions
 from event_functions import (
     EVENT_FUNCTION_REGEX_FRAGMENT,
     normalize_function_name,
-    requires_food_validation,
     same_event_function,
 )
 from text_extraction import safe_extract_text
@@ -128,6 +127,14 @@ def has_food_evidence(event: dict) -> bool:
         return False
     food_signals = hot_items + cold_items + type_events_items
     return any(signal.lower() in raw for signal in food_signals)
+
+
+def should_keep_event(event: dict) -> bool:
+    if event.get("ignore_event"):
+        return False
+    if include_all_event_functions():
+        return True
+    return has_food_evidence(event)
 
 # Detecta si una página pertenece a un bloque Page # 1 of x
 def extraer_num_pagina(texto):
@@ -333,7 +340,7 @@ with pdfplumber.open(pdf_path) as pdf:
                                     'food': clasificado
                                 }
                                 evento['organization'] = organization
-                                if requires_food_validation(evento.get("function", "")) and not has_food_evidence(evento):
+                                if not include_all_event_functions() and not has_food_evidence(evento):
                                     evento["ignore_event"] = True
                                 break
                             
@@ -392,7 +399,7 @@ with pdfplumber.open(pdf_path) as pdf:
                                 },
                                 "sub_event": True  # para saber que se generó desde cabecera
                             }
-                            if not requires_food_validation(nuevo_evento.get("function", "")) or has_food_evidence(nuevo_evento):
+                            if should_keep_event(nuevo_evento):
                                 eventos_pagina.append(nuevo_evento)
 
 
@@ -402,8 +409,7 @@ with pdfplumber.open(pdf_path) as pdf:
                 eventos_filtrados = [
                     event
                     for event in eventos_pagina
-                    if not event.get("ignore_event")
-                    and (not requires_food_validation(event.get("function", "")) or has_food_evidence(event))
+                    if should_keep_event(event)
                 ]
                 events.extend(eventos_filtrados)
 

@@ -45,6 +45,7 @@ EVENT_WITH_UNKNOWN = {
                 "operational_split": {
                     "hot_kitchen_items": [],
                     "cold_kitchen_items": [],
+                    "dietary_items": [],
                     "non_kitchen_items": [],
                     "unknown_items": ["Mystery Item"],
                 },

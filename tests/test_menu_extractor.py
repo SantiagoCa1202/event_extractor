@@ -434,6 +434,58 @@ class MenuExtractorTests(unittest.TestCase):
         sides_section = next(section for section in sections if section.title == "Sides")
         self.assertEqual([item.name for item in sides_section.items], ["Creamy Mac & Cheese", "BBQ Baked Beans"])
 
+    def test_down_south_boulevard_keeps_dessert_separate_from_priced_add_on(self) -> None:
+        raw = "\n".join(
+            [
+                "12:00 PM Lunch Buffet",
+                "Down South Boulevard",
+                "Tortilla Chips, Pico de Gallo, Crema",
+                "Greens & Toppings: Spring Mix, Roasted Corn, Black Beans, Red Onion, Cheddar Cheese, Tortilla Strips Chipotle Ranch, White Balsamic",
+                "Choice of Two Proteins:",
+                "Flank Steak with Chimichurri,",
+                "Flounder a la Veracruz",
+                "Cilantro Lime Rice",
+                "Charros Beans",
+                "Dessert: Assorted Sliced Cake",
+                "Tractor Iced Tea & Starbucks Coffee",
+                "Based on 60 Minutes of Continuous Service",
+                "$60.00 per Person",
+                "(70) Chile Rellenos with Ranchero Sauce @ $6",
+                "Note",
+                "5- Vegetarian/Vegan",
+                "3- Gluten Free",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        dessert_section = next(section for section in sections if section.title == "Dessert")
+        self.assertEqual([item.name for item in dessert_section.items], ["Assorted Sliced Cake"])
+        item_section = next(section for section in sections if section.title == "Items")
+        self.assertIn("Chile Rellenos with Ranchero Sauce", [item.name for item in item_section.items])
+        all_names = [item.name for section in sections for item in section.items]
+        self.assertNotIn("Note", all_names)
+        self.assertNotIn("5- Vegetarian/Vegan", all_names)
+        self.assertNotIn("3- Gluten Free", all_names)
+
+    def test_mason_jar_caesar_keeps_ingredients_as_notes_not_items(self) -> None:
+        raw = "\n".join(
+            [
+                "6:00 PM Reception Craft City Social Club",
+                "(120) Mason Jar Caesar @ $10",
+                "Baby Gem, Parmesan, Roasted",
+                "Tomato, Garlic Croutons,",
+                "Caesar Dressing",
+                "Note",
+                "5- Vegetarian/Vegan",
+                "3- Gluten Free",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        item_section = next(section for section in sections if section.title == "Items")
+        self.assertEqual([item.name for item in item_section.items], ["Mason Jar Caesar"])
+        self.assertIn("Baby Gem, Parmesan, Roasted", item_section.items[0].notes)
+        self.assertIn("Tomato, Garlic Croutons", item_section.items[0].notes)
+        self.assertIn("Caesar Dressing", item_section.items[0].notes)
+
     def test_queens_table_breaks_into_expected_sections(self) -> None:
         raw = "\n".join(
             [
@@ -483,7 +535,7 @@ class MenuExtractorTests(unittest.TestCase):
         dessert_section = next(section for section in sections if section.title == "Dessert")
         self.assertEqual([item.name for item in dessert_section.items], ["Assorted Sliced Cake"])
 
-    def test_special_plate_counts_become_notes_not_items(self) -> None:
+    def test_special_plate_counts_become_dietary_restrictions_not_items(self) -> None:
         raw = "\n".join(
             [
                 "12:00 PM Plated Lunch Carolina Ballroom",
@@ -491,14 +543,27 @@ class MenuExtractorTests(unittest.TestCase):
                 "(20) vegan/vegeterian",
             ]
         )
-        sections = extract_menu_sections(raw)
+        cleaned, dietary = extract_dietary_restrictions(raw)
+        sections = extract_menu_sections(cleaned)
         item_section = next(section for section in sections if section.title == "Items")
         self.assertEqual(len(item_section.items), 1)
         self.assertEqual(
             item_section.items[0].name,
             "Roasted Airline Chicken Breast with Herb Roasted Potatoes, Broccolini, and Lemon Thyme Jus",
         )
-        self.assertEqual(item_section.items[0].notes, "(20) vegan/vegeterian")
+        self.assertIsNone(item_section.items[0].notes)
+        self.assertEqual(
+            dietary,
+            [
+                {
+                    "guest_name": None,
+                    "restrictions": ["Vegan/Vegetarian"],
+                    "count": 20,
+                    "kind": "special_count",
+                    "source_text": "(20) vegan/vegeterian",
+                }
+            ],
+        )
 
     def test_keeps_undetailed_displays_and_stations_as_empty_sections(self) -> None:
         raw = "\n".join(
@@ -577,6 +642,22 @@ class MenuExtractorTests(unittest.TestCase):
         sections = extract_menu_sections(raw)
         self.assertEqual(sections, [])
 
+    def test_filters_replating_operational_note_from_breakfast(self) -> None:
+        raw = "\n".join(
+            [
+                "7:00 AM Continental Breakfast",
+                "Modified Continental",
+                "Assorted Pastries",
+                "Individual Yogurts",
+                "Fresh Sliced Fruit",
+                "Please leave non-perishable items out until end of morning break (re-plating fee on morning break function)",
+                "$35.00 per Person",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        names = [item.name for section in sections for item in section.items]
+        self.assertEqual(names, ["Assorted Pastries", "Individual Yogurts", "Fresh Sliced Fruit"])
+
     def test_manual_line_rules_merge_known_split_items(self) -> None:
         raw = "\n".join(
             [
@@ -594,7 +675,7 @@ class MenuExtractorTests(unittest.TestCase):
         names = [item.name for section in sections for item in section.items]
         self.assertIn("Garlic & Chili Broccolini", names)
         self.assertIn("Creamy Mac & Cheese", names)
-        self.assertIn("Macaroni & Cheese Bites", names)
+        self.assertIn("Mac & Cheese Bites", names)
 
     def test_passed_items_use_passed_section_and_strip_prefix(self) -> None:
         raw = "\n".join(
@@ -659,6 +740,38 @@ class MenuExtractorTests(unittest.TestCase):
         self.assertEqual(
             [item.name for item in normalize_item_line("BBQ, Korean, and Buffalo Sauce on Side")],
             ["BBQ", "Korean", "Buffalo Sauce"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Assorted Rolls & Butter")],
+            ["Assorted Rolls with Butter"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Mac & Cheese")],
+            ["Mac & Cheese"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Herb Marinated Chicken Breast, Garlic & Cajun Shrimp")],
+            ["Herb Marinated Chicken Breast", "Garlic & Cajun Shrimp"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Butternut Squash Ravioli - Brown Butter, Pecans, Crispy Sage")],
+            ["Butternut Squash Ravioli - Brown Butter, Pecans, Crispy Sage"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Spinach, Mushroom, Onion, Garlic Cream Sauce")],
+            ["Spinach, Mushroom, Onion, Garlic Cream Sauce"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Breakfast Pastries, Croissants & Mini Biscuits with Strawberry and Apricot")],
+            ["Breakfast Pastries", "Croissants", "Mini Biscuits", "Strawberry", "Apricot"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("(350) Mac & Cheese Bites @ $5 Each")],
+            ["Mac & Cheese Bites"],
+        )
+        self.assertEqual(
+            [item.name for item in normalize_item_line("Grilled Beef Coulotte, Chimichurri, Chipotle Aioli")],
+            ["Grilled Beef Coulotte, Chimichurri, Chipotle Aioli"],
         )
 
     def test_extract_menu_sections_skips_menu_tbd_placeholder(self) -> None:

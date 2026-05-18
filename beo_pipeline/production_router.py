@@ -5,9 +5,11 @@ import re
 
 
 HOT_ITEM_RULES = {
+    "assorted rolls": "exact_item_rule",
     "assorted rolls with butter": "exact_item_rule",
     "rolls with butter": "exact_item_rule",
     "selection of rolls and butter": "exact_item_rule",
+    "selection of rolls": "exact_item_rule",
     "roasted airline chicken breast with herb roasted potatoes, broccolini, and lemon thyme jus": "exact_item_rule",
     "curry roasted cauliflower": "exact_item_rule",
     "garlic mashed potatoes": "exact_item_rule",
@@ -31,6 +33,7 @@ HOT_ITEM_RULES = {
     "roasted lemon thyme chicken breast": "exact_item_rule",
     "steak medallions with red wine reduction": "exact_item_rule",
     "seared salmon with a cajun cream sauce": "exact_item_rule",
+    "seared salmon with cajun cream sauce": "exact_item_rule",
     "herbs de provence pork loin": "exact_item_rule",
     "applewood smoked thick cut bacon": "exact_item_rule",
     "rosemary roasted potatoes": "exact_item_rule",
@@ -46,6 +49,7 @@ HOT_ITEM_RULES = {
     "vegetable lasagna": "exact_item_rule",
     "penne pasta with butter and parsley": "exact_item_rule",
     "garlic & chili broccolini": "exact_item_rule",
+    "garlic chilli broccolini": "exact_item_rule",
     "north carolina smoked pulled pork": "exact_item_rule",
     "smoked brisket": "exact_item_rule",
     "bbq rub shrimp": "exact_item_rule",
@@ -57,8 +61,12 @@ HOT_ITEM_RULES = {
     "sweet bbq": "exact_item_rule",
     "creamy mac & cheese": "exact_item_rule",
     "tortilla chips": "exact_item_rule",
+    "cauliflower puree": "exact_item_rule",
     "flank steak with chimichurri": "exact_item_rule",
+    "grilled beef coulotte, chimichurri, chipotle aioli": "exact_item_rule",
     "citrus pollo asado": "exact_item_rule",
+    "flounder a la veracruz": "exact_item_rule",
+    "chile rellenos with ranchero sauce": "exact_item_rule",
     "cilantro lime rice": "exact_item_rule",
     "charros beans": "exact_item_rule",
     "entree choice:beef short ribs and seared scallops": "exact_item_rule",
@@ -74,6 +82,7 @@ HOT_ITEM_RULES = {
     "ring dinner bell": "exact_item_rule",
     "roast lamb loin": "exact_item_rule",
     "macaroni & cheese bites": "exact_item_rule",
+    "mac & cheese bites": "exact_item_rule",
     "cheesesteak spring rolls": "exact_item_rule",
     "pimento cheese & pickled shrimp bruschetta crostini": "exact_item_rule",
     "self-serve chicken wings": "exact_item_rule",
@@ -95,6 +104,7 @@ HOT_ITEM_RULES = {
     "hot dog": "exact_item_rule",
     "lemon thyme jus": "exact_item_rule",
     "ponzu sauce": "exact_item_rule",
+    "ponzu sauce passed": "exact_item_rule",
     "rice": "exact_item_rule",
     "roasted potato with herbs": "exact_item_rule",
     "roasted potatoes": "exact_item_rule",
@@ -109,6 +119,81 @@ HOT_ITEM_RULES = {
     "green beans w roasted peppers": "exact_item_rule",
     "roasted herb potatoes w red onion": "exact_item_rule",
     "chicken breast w/ lemon thyme jus and braised beef short rib, rosemary and garlic roasted potatoes, grilled asparagus": "exact_item_rule",
+    "mac & cheese": "exact_item_rule",
+    "garlic & cajun shrimp": "exact_item_rule",
+    "chicken tenders with assorted sauces": "exact_item_rule",
+    "florentine stuffed chicken": "exact_item_rule",
+    "spinach, mushroom, onion, garlic cream sauce": "exact_item_rule",
+    "butternut squash ravioli - brown butter, pecans, crispy sage": "exact_item_rule",
+    "roasted rosemary fingerling potato": "exact_item_rule",
+    "lemon thyme asparagus": "exact_item_rule",
+    "roasted carrots": "exact_item_rule",
+    "soup du jour": "exact_item_rule",
+    "soup du jour (tomato soup)": "exact_item_rule",
+    "herb marinated chicken breast": "exact_item_rule",
+    "bbq chicken - thigh": "exact_item_rule",
+    "baslamic glazed brussel sprouts": "exact_item_rule",
+    "buffalo chicken empanada": "exact_item_rule",
+    "buffalo chicken empanadas": "exact_item_rule",
+    "buffalo pizza": "exact_item_rule",
+    "burger sliders - half cheese / half no cheese": "exact_item_rule",
+    "cauliflower pizza": "exact_item_rule",
+    "chicken empanadas": "exact_item_rule",
+    "chicken sliders": "exact_item_rule",
+    "chicken tenders": "exact_item_rule",
+    "cinnamon french toast with butter & syrup": "exact_item_rule",
+    "citrus polla asado": "exact_item_rule",
+    "crab rangoon": "exact_item_rule",
+    "margherita pizza": "exact_item_rule",
+    "mini bbq slider": "exact_item_rule",
+    "mini corn dogs": "exact_item_rule",
+    "mini pretzel bites": "exact_item_rule",
+    "penne pasta alla vodka": "exact_item_rule",
+    "pepperoni pizza": "exact_item_rule",
+    "pigs in a blanket": "exact_item_rule",
+    "quinoa stir fry": "exact_item_rule",
+    "roasted mahi mahi- pina colada sauce": "exact_item_rule",
+    "roasted pork in salsa verde": "exact_item_rule",
+    "sausage pizza": "exact_item_rule",
+    "scrambled eggs and herbs": "exact_item_rule",
+    "shrimp kabob": "exact_item_rule",
+    "shrimp scampi": "exact_item_rule",
+    "spring rolls": "exact_item_rule",
+    "yukon gold mash potato": "exact_item_rule",
+    "basket of french fries": "exact_item_rule",
+    "chicken tenders with a side (fries, chips, or whole fruit)": "exact_item_rule",
+    "hamburger with a side (fries, chips, or whole fruit)": "exact_item_rule",
+    "grilled chicken with cajun cream sauce": "exact_item_rule",
+    "salmon with miso yaki sauce *no sesame seeds": "exact_item_rule",
+    "salmon with miso yaki sauce no sesame seeds": "exact_item_rule",
+    "bbq chicken thigh": "exact_item_rule",
+    "beef filet & blue cheese wellington passed": "exact_item_rule",
+    "grilled chicken breast with chimichurri sauce, cilantro lime rice, and charro beans (gf, df)": "exact_item_rule",
+    "lemon butter asparagus": "exact_item_rule",
+    "mashed potatoes": "exact_item_rule",
+    "plated bbq rubbed mushrooms": "exact_item_rule",
+    "pork loin marsala": "exact_item_rule",
+    "roasted lemon with thyme chicken breast": "exact_item_rule",
+    "citrus polla asado, chile rellenos with ranchero sauce": "exact_item_rule",
+    "blue cheese wellington passed": "exact_item_rule",
+    "beef filet & blue cheese wellington passed": "exact_item_rule",
+    "crispy vegetable dumpling, ponzu sauce passed": "exact_item_rule",
+    "crisp lemongrass chicken dumpling with sweet thai sauce passed": "exact_item_rule",
+    "crispy shrimp dumpling with lime soy sauce passed": "exact_item_rule",
+    "farm eggs or egg whites": "exact_item_rule",
+    "farm eggs": "exact_item_rule",
+    "green beans": "exact_item_rule",
+    "marinara sauce": "exact_item_rule",
+    "meatball marinara (sauce on side)": "exact_item_rule",
+    "mushroom farotto": "exact_item_rule",
+    "rosemary au jus": "exact_item_rule",
+    "roasted airline chicken w/ mushroom farro": "exact_item_rule",
+    "seared salmon with basil pesto": "exact_item_rule",
+    "silver dollar rolls": "exact_item_rule",
+    "smoked cheddar grits": "exact_item_rule",
+    "spicy andouille sausage": "exact_item_rule",
+    "sweet pea risotto": "exact_item_rule",
+    "whipped potatoes": "exact_item_rule",
 }
 
 HOT_ITEM_KEYWORD_RULES = {
@@ -156,6 +241,25 @@ NON_KITCHEN_ITEM_RULES = {
     "stella artois, premium, belgium": "beverage_item_rule",
     "sierra nevada hazy ipa, craft, chico": "beverage_item_rule",
     "local craft, charlotte": "beverage_item_rule",
+    "gatorade": "beverage_item_rule",
+    "mimosa": "beverage_item_rule",
+    "red bull": "beverage_item_rule",
+    "soft drinks": "beverage_item_rule",
+    "house wine glass": "beverage_item_rule",
+    "pinot noir": "beverage_item_rule",
+    "premium brands": "beverage_item_rule",
+    "sauvignon blanc": "beverage_item_rule",
+    "sparkling": "beverage_item_rule",
+    "sparkling wine": "beverage_item_rule",
+    "casamigos silver tequila": "beverage_item_rule",
+    "crown royal canadian whiskey": "beverage_item_rule",
+    "cruzan rum": "beverage_item_rule",
+    "grey goose vodka": "beverage_item_rule",
+    "house champagne": "beverage_item_rule",
+    "johnnie walker black scotch": "beverage_item_rule",
+    "selection of deluxe wines": "beverage_item_rule",
+    "tanqueray gin": "beverage_item_rule",
+    "woodford reserve kentucky bourbon": "beverage_item_rule",
 }
 
 COLD_ITEM_RULES = {
@@ -181,6 +285,7 @@ COLD_ITEM_RULES = {
     "dried apricot": "exact_item_rule",
     "marcona almonds": "exact_item_rule",
     "baby carrots": "exact_item_rule",
+    "baby gem": "exact_item_rule",
     "baby spinach": "exact_item_rule",
     "celery": "exact_item_rule",
     "sweet peppers": "exact_item_rule",
@@ -225,6 +330,7 @@ COLD_ITEM_RULES = {
     "carrot": "exact_item_rule",
     "parmesan": "exact_item_rule",
     "croutons": "exact_item_rule",
+    "garlic croutons": "exact_item_rule",
     "caesar dressing": "exact_item_rule",
     "coleslaw": "exact_item_rule",
     "pickle chips": "exact_item_rule",
@@ -293,9 +399,137 @@ COLD_ITEM_RULES = {
     "cucumbers": "exact_item_rule",
     "carrots": "exact_item_rule",
     "cheddar cheese": "exact_item_rule",
+    "blue moody cheese": "exact_item_rule",
+    "chestnut honey": "exact_item_rule",
     "italian dressing": "exact_item_rule",
     "strawberry shortcake": "exact_item_rule",
     "cannoli": "exact_item_rule",
+    "assorted petite fours - individual desserts": "exact_item_rule",
+    "bacon bits": "exact_item_rule",
+    "ceasar dressing": "exact_item_rule",
+    "fruit display": "exact_item_rule",
+    "ham sandwich": "exact_item_rule",
+    "hardboiled egg": "exact_item_rule",
+    "mixed green salad w. assorted dressings": "exact_item_rule",
+    "mason jar caesar": "exact_item_rule",
+    "marinated grilled vegetables": "exact_item_rule",
+    "potato chips": "exact_item_rule",
+    "potato salad": "exact_item_rule",
+    "turkey wrap": "exact_item_rule",
+    "turkey wrap with a side (fries, chips, or whole fruit)": "exact_item_rule",
+    "vegetarian wraps": "exact_item_rule",
+    "white balsamic vinegarette": "exact_item_rule",
+    "apple pie - caramel sauce": "exact_item_rule",
+    "assorted and cured meats": "exact_item_rule",
+    "assorted cake pops": "exact_item_rule",
+    "assorted candy cones": "exact_item_rule",
+    "assorted cereals and milk": "exact_item_rule",
+    "assorted mini donuts by the dozen": "exact_item_rule",
+    "charcuterie board": "exact_item_rule",
+    "chili marinated olives": "exact_item_rule",
+    "chocolate covered strawberries": "exact_item_rule",
+    "dried fruit": "exact_item_rule",
+    "french macarons": "exact_item_rule",
+    "fresh cut fruit": "exact_item_rule",
+    "hard boiled eggs": "exact_item_rule",
+    "homemade salsa": "exact_item_rule",
+    "hot coppa": "exact_item_rule",
+    "kettle chips": "exact_item_rule",
+    "krispy kreme glazed donuts": "exact_item_rule",
+    "mango salad cups": "exact_item_rule",
+    "maple smoked cheddar": "exact_item_rule",
+    "mini doughnuts by the dozen": "exact_item_rule",
+    "mini fruit skewers": "exact_item_rule",
+    "nuts": "exact_item_rule",
+    "onion jam": "exact_item_rule",
+    "pickled okra": "exact_item_rule",
+    "potato salad &": "exact_item_rule",
+    "prosciutto": "exact_item_rule",
+    "queen city bacon pimento cheese": "exact_item_rule",
+    "raspberry preserve": "exact_item_rule",
+    "salami": "exact_item_rule",
+    "sorpressata": "exact_item_rule",
+    "sour cream chive dip": "exact_item_rule",
+    "spicy peach chutney accoutrements artisan bread and crackers": "exact_item_rule",
+    "tangerine": "exact_item_rule",
+    "tomme thomasville": "exact_item_rule",
+    "vegetable shooters with hummus": "exact_item_rule",
+    "warm aged mont chevre cheese": "exact_item_rule",
+    "whole grain mustard": "exact_item_rule",
+    "assorted candy bars": "exact_item_rule",
+    "assorted fruit cups": "exact_item_rule",
+    "bags of chips": "exact_item_rule",
+    "bagel crisp": "exact_item_rule",
+    "chicken caesar salad": "exact_item_rule",
+    "chocolate dipped strawberries": "exact_item_rule",
+    "cold smoked sockeye salmon": "exact_item_rule",
+    "egg salad on mini croissant": "exact_item_rule",
+    "garlic boursin": "exact_item_rule",
+    "herb & garlic boursin": "exact_item_rule",
+    "large mixed greens salad": "exact_item_rule",
+    "macarons - assorted flavors": "exact_item_rule",
+    "petite four mini desserts": "exact_item_rule",
+    "protein/granola bars (2)": "exact_item_rule",
+    "queen elizabeth's curried chicken salad on brioche": "exact_item_rule",
+    "whole fruit (1)": "exact_item_rule",
+    "whole fruit (2)": "exact_item_rule",
+    "black beans": "exact_item_rule",
+    "blueberries": "exact_item_rule",
+    "brulee cheesecake": "exact_item_rule",
+    "chef's choice dessert (___ gf/vegan banana cake)": "exact_item_rule",
+    "chia seeds": "exact_item_rule",
+    "chipotle ranch & white balsamic (set on tables)": "exact_item_rule",
+    "coffee cake": "exact_item_rule",
+    "gf pastries": "exact_item_rule",
+    "garden green salad with white balsamic": "exact_item_rule",
+    "greek yogurt": "exact_item_rule",
+    "lemon cake": "exact_item_rule",
+    "organic granola": "exact_item_rule",
+    "raw honeycomb": "exact_item_rule",
+    "red onion": "exact_item_rule",
+    "roasted corn": "exact_item_rule",
+    "scones": "exact_item_rule",
+    "sliced almonds": "exact_item_rule",
+    "strawberry cheesecake - preset": "exact_item_rule",
+    "sugar biscuits": "exact_item_rule",
+    "tortilla strips": "exact_item_rule",
+    "vanilla yogurt": "exact_item_rule",
+    "apple pie - no pecans": "exact_item_rule",
+    "arugula/ frisee salad w white balsamic dressing": "exact_item_rule",
+    "baby spinach salad": "exact_item_rule",
+    "brie salad": "exact_item_rule",
+    "fresh fruit": "exact_item_rule",
+    "preset chef's choice dessert": "exact_item_rule",
+    "assorted bagels with butter and whipped cream cheese": "exact_item_rule",
+    "assorted clif protein bars": "exact_item_rule",
+    "bloody mary crab claw shooters": "exact_item_rule",
+    "butter cracker crumbs": "exact_item_rule",
+    "citrus poached gulf shrimp": "exact_item_rule",
+    "chives": "exact_item_rule",
+    "cocktail sauce": "exact_item_rule",
+    "creamed horseradish": "exact_item_rule",
+    "crispy onions": "exact_item_rule",
+    "gorgonzola crumbles": "exact_item_rule",
+    "granola bars": "exact_item_rule",
+    "guacamole": "exact_item_rule",
+    "herb goat cheese": "exact_item_rule",
+    "horseradish": "exact_item_rule",
+    "horseradish and lemon wedges": "exact_item_rule",
+    "herb goat cheese & tomato jam on crostini passed": "exact_item_rule",
+    "individual greek yogurt parfaits with fresh berries & granola": "exact_item_rule",
+    "lemon wedges": "exact_item_rule",
+    "micro basil": "exact_item_rule",
+    "mignonette": "exact_item_rule",
+    "parmesan cheese": "exact_item_rule",
+    "peruvian ceviche, lime, red onion, habanero passed": "exact_item_rule",
+    "peruvian ceviche": "exact_item_rule",
+    "peruvian scallop crudo": "exact_item_rule",
+    "power bars": "exact_item_rule",
+    "roasted tomato": "exact_item_rule",
+    "shredded parmesan": "exact_item_rule",
+    "shucked oysters": "exact_item_rule",
+    "tomato jam on crostini passed": "exact_item_rule",
+    "tomato salsa": "exact_item_rule",
 }
 
 COLD_ITEM_KEYWORD_RULES = {
@@ -305,6 +539,24 @@ COLD_ITEM_KEYWORD_RULES = {
 
 HOT_CONTEXT_RULES = {
     ("nacho display", "tortilla chips"): "section_context_rule:nacho_display",
+    ("(3) herb crusted prime rib carving station", "rosemary au jus"): "section_context_rule:prime_rib_carving_station",
+    ("(3) herb crusted prime rib carving station", "silver dollar rolls"): "section_context_rule:prime_rib_carving_station",
+    ("(200) mac n' cheese bar", "grilled chicken"): "section_context_rule:mac_n_cheese_bar",
+    ("(200) mac n' cheese bar", "brisket burnt ends"): "section_context_rule:mac_n_cheese_bar",
+    ("(200) mac n' cheese bar", "bacon lardons"): "section_context_rule:mac_n_cheese_bar",
+    ("(200) mac n' cheese bar", "grilled wild mushrooms"): "section_context_rule:mac_n_cheese_bar",
+    ("(200) shrimp & grits station", "blackened shrimp"): "section_context_rule:shrimp_and_grits_station",
+    ("(200) shrimp & grits station", "grilled wild mushroom"): "section_context_rule:shrimp_and_grits_station",
+    ("(200) shrimp & grits station", "micro cilantro"): "section_context_rule:shrimp_and_grits_station",
+    ("(200) shrimp & grits station", "roasted pepper"): "section_context_rule:shrimp_and_grits_station",
+    ("(200) fajita station", "grilled peppers"): "section_context_rule:fajita_station",
+    ("(modified) pasta station", "cavatappi carbonara- chicken"): "section_context_rule:modified_pasta_station",
+    ("(modified) pasta station", "roasted peppers"): "section_context_rule:modified_pasta_station",
+    ("(modified) pasta station", "spinach"): "section_context_rule:modified_pasta_station",
+    ("(modified) pasta station", "squash"): "section_context_rule:modified_pasta_station",
+    ("(modified) pasta station", "vegetarian penne a la vodka- grilled chicken"): "section_context_rule:modified_pasta_station",
+    ("(modified) pasta station", "vegetarian penne a la vodka roasted peppers"): "section_context_rule:modified_pasta_station",
+    ("(modified) pasta station", "wild mushroom"): "section_context_rule:modified_pasta_station",
 }
 
 COLD_CONTEXT_RULES = {
@@ -314,6 +566,65 @@ COLD_CONTEXT_RULES = {
     ("continental", "strawberry"): "section_context_rule:continental_breakfast",
     ("continental", "apricot jam"): "section_context_rule:continental_breakfast",
     ("continental", "assorted cereals"): "section_context_rule:continental_breakfast",
+    ("the uptown", "breakfast pastries"): "section_context_rule:the_uptown_breakfast",
+    ("the uptown", "croissants"): "section_context_rule:the_uptown_breakfast",
+    ("the uptown", "mini biscuits"): "section_context_rule:the_uptown_breakfast",
+    ("the uptown", "strawberry"): "section_context_rule:the_uptown_breakfast",
+    ("the uptown", "apricot"): "section_context_rule:the_uptown_breakfast",
+    ("charcuterie display", "prosciutto"): "section_context_rule:charcuterie_display",
+    ("charcuterie display", "hot coppa"): "section_context_rule:charcuterie_display",
+    ("charcuterie display", "salami"): "section_context_rule:charcuterie_display",
+    ("charcuterie display", "sorpressata"): "section_context_rule:charcuterie_display",
+    ("charcuterie display", "pickled okra"): "section_context_rule:charcuterie_display",
+    ("charcuterie display", "whole grain mustard"): "section_context_rule:charcuterie_display",
+    ("charcuterie display", "tangerine"): "section_context_rule:charcuterie_display",
+    ("charcuterie display", "chili marinated olives"): "section_context_rule:charcuterie_display",
+    ("chips and dips pairing", "homemade salsa"): "section_context_rule:chips_and_dips_pairing",
+    ("chips and dips pairing", "sour cream chive dip"): "section_context_rule:chips_and_dips_pairing",
+    ("chips and dips pairing", "queen city bacon pimento cheese"): "section_context_rule:chips_and_dips_pairing",
+    ("everyday is a sundae", "chocolate ice cream"): "section_context_rule:everyday_is_a_sundae",
+    ("everyday is a sundae", "vanilla ice cream"): "section_context_rule:everyday_is_a_sundae",
+    ("everyday is a sundae", "oreo cookie"): "section_context_rule:everyday_is_a_sundae",
+    ("everyday is a sundae", "cherries"): "section_context_rule:everyday_is_a_sundae",
+    ("everyday is a sundae", "whipped cream"): "section_context_rule:everyday_is_a_sundae",
+    ("everyday is a sundae", "crushed peanuts"): "section_context_rule:everyday_is_a_sundae",
+    ("everyday is a sundae", "caramel topping"): "section_context_rule:everyday_is_a_sundae",
+    ("everyday is a sundae", "strawberry topping"): "section_context_rule:everyday_is_a_sundae",
+    ("everyday is a sundae", "chocolate topping"): "section_context_rule:everyday_is_a_sundae",
+    ("everyday is a sundae", "sprinkles"): "section_context_rule:everyday_is_a_sundae",
+    ("(3) herb crusted prime rib carving station", "creamed horseradish"): "section_context_rule:prime_rib_carving_station",
+    ("(200) mac n' cheese bar", "butter cracker crumbs"): "section_context_rule:mac_n_cheese_bar",
+    ("(200) mac n' cheese bar", "chives"): "section_context_rule:mac_n_cheese_bar",
+    ("(200) mac n' cheese bar", "roasted tomato"): "section_context_rule:mac_n_cheese_bar",
+    ("(200) mac n' cheese bar", "parmesan cheese"): "section_context_rule:mac_n_cheese_bar",
+    ("(200) mac n' cheese bar", "gorgonzola crumbles"): "section_context_rule:mac_n_cheese_bar",
+    ("seafood display - market price", "shucked oysters"): "section_context_rule:seafood_display",
+    ("seafood display - market price", "citrus poached gulf shrimp"): "section_context_rule:seafood_display",
+    ("seafood display - market price", "bloody mary crab claw shooters"): "section_context_rule:seafood_display",
+    ("seafood display - market price", "peruvian scallop crudo"): "section_context_rule:seafood_display",
+    ("seafood display - market price", "cocktail sauce"): "section_context_rule:seafood_display",
+    ("seafood display - market price", "horseradish"): "section_context_rule:seafood_display",
+    ("seafood display - market price", "mignonette"): "section_context_rule:seafood_display",
+    ("seafood display - market price", "lemon wedges"): "section_context_rule:seafood_display",
+    ("seafood display - market price", "horseradish and lemon wedges"): "section_context_rule:seafood_display",
+    ("tea thyme", "egg salad on mini croissant"): "section_context_rule:tea_thyme",
+    ("tea thyme", "queen elizabeth's curried chicken salad on brioche"): "section_context_rule:tea_thyme",
+    ("tea thyme", "cold smoked sockeye salmon"): "section_context_rule:tea_thyme",
+    ("tea thyme", "herb & garlic boursin"): "section_context_rule:tea_thyme",
+    ("tea thyme", "garlic boursin"): "section_context_rule:tea_thyme",
+    ("tea thyme", "bagel crisp"): "section_context_rule:tea_thyme",
+    ("tea thyme", "assorted scones"): "section_context_rule:tea_thyme",
+    ("tea thyme", "macarons - assorted flavors"): "section_context_rule:tea_thyme",
+    ("tea thyme", "petite four mini desserts"): "section_context_rule:tea_thyme",
+    ("tea thyme", "chocolate dipped strawberries"): "section_context_rule:tea_thyme",
+    ("yogurt parfait bar", "greek yogurt"): "section_context_rule:yogurt_parfait_bar",
+    ("yogurt parfait bar", "vanilla yogurt"): "section_context_rule:yogurt_parfait_bar",
+    ("yogurt parfait bar", "blueberries"): "section_context_rule:yogurt_parfait_bar",
+    ("yogurt parfait bar", "strawberries"): "section_context_rule:yogurt_parfait_bar",
+    ("yogurt parfait bar", "raw honeycomb"): "section_context_rule:yogurt_parfait_bar",
+    ("yogurt parfait bar", "organic granola"): "section_context_rule:yogurt_parfait_bar",
+    ("yogurt parfait bar", "sliced almonds"): "section_context_rule:yogurt_parfait_bar",
+    ("yogurt parfait bar", "chia seeds"): "section_context_rule:yogurt_parfait_bar",
 }
 DELI_COLD_SECTION_TITLES = {
     "breads",
@@ -323,6 +634,25 @@ DELI_COLD_SECTION_TITLES = {
     "condiments",
     "country potato salad",
 }
+
+IGNORED_ITEM_PATTERNS = (
+    r"^\d{2}:\d{2}-\d{2}:\d{2}$",
+    r"^\d+\s+(?:reg|regular|decaf|tea|hot tea)$",
+    r"^\d+\s+(?:celiac|.+ allergy)$",
+    r"^\d+(?:-\d+)?\s+side hall doors locked until breakouts$",
+    r"^\d+\s+in back$",
+    r"^(?:\(?\d+\)?\s+)?gallons?\s+.+$",
+    r"^add two rows of theatre seating.+$",
+    r"^do not refresh.+$",
+    r"^notify client prior.+$",
+    r"^leave out additional \d+ minutes$",
+    r"^plating fee .+$",
+    r"^price includes attendant fee$",
+    r"^refresh as needed(?: throughout day)?$",
+    r"^served w\..+$",
+    r"^set in foyer to start at .+$",
+    r"^sweet tea(?: and iced water| on consumption)?$",
+)
 
 COLD_SECTION_TYPES = {"cold_items", "snack_items", "salad_items"}
 HOT_SECTION_TYPES = {"hot_items"}
@@ -397,6 +727,91 @@ IGNORED_ITEM_RULES = {
     "tableside coffee service after entrees",
     "tableside hot tea and coffee service after entrees",
     "tea bag assortment",
+    "all about the movies",
+    "bbq rub",
+    "bubly flavored sparkling water",
+    "candied pecans",
+    "candy table",
+    "candy to be provided and set by marybeth",
+    "cheese bites",
+    "coconut water",
+    "faculty beverage station",
+    "gallons lemonade",
+    "iced water",
+    "ketchup dipping sauce",
+    "mango",
+    "mixed berries",
+    "note",
+    "pelegrino sparkling water",
+    "pineapple",
+    "reduction",
+    "smoothie bar",
+    "student beverage stations",
+    "sweet tea",
+    "the banana strawberry",
+    "the mango pineapple",
+    "the mixed berry",
+    "vanilla yogurt",
+    "whipped cream",
+    "beverages and snacks open at 10am",
+    "concessions end at 1pm",
+    "food opens at 11am",
+    "comp snacks for up to 10 staff members",
+    "comp snacks for up to 20 staff members",
+    "cucumber mint cooler - lemonade",
+    "decaf coffee (group providing own coffee sleeves- no starbucks branding)",
+    "entree served at 5:30pm)",
+    "ginger beer",
+    "group providing own coffee sleeves- no starbucks branding",
+    "honey syrup and sparking water",
+    "jalisco margarita - spiritless jalisco with lime juice, simple syrup, orange juice, jalapeno, and strawberries",
+    "lemon juice",
+    "love me tender - peach nectar",
+    "mango virgin mule - mango syrup",
+    "only foyer doors to symphony open during plenary- 1-3",
+    "per contract",
+    "per contract (combine mon",
+    "pineapple juice and sparkling water",
+    "plated dinner (salad and dessert pre-set",
+    "reserved signs needed- 3 tables up front",
+    "rotating",
+    "salad, dessert, water pre-set. iced tea & coffee offered tableside. staff to clear room when program begins.",
+    "soda water",
+    "sparking citrus punch: orange juice",
+    "starbucks regular coffee and condiments",
+    "starbucks regular coffee with condiments",
+    "tasting of the below 5 mocktails",
+    "the uptown (small group pricing)",
+    "the uptown (small group pricing) tbd- plated instead?",
+    "thu)",
+    "yellow tables on diagram not pre-set",
+    "cucumber slices and mint",
+    "1 ticket per guest for beer or wine. all liquor is cash",
+    "ask before refresh",
+    "beverage 4:00 pm-5:30 pm reception",
+    "buffets in foyer",
+    "black pepper",
+    "craft",
+    "choose one protein",
+    "crushed pepper",
+    "decaffeinated coffee",
+    "min order of 12",
+    "on consumption per bottle",
+    "onions sour cream",
+    "only served for the first hour",
+    "premium",
+    "requires chef attendant",
+    "client bringing in cake - no fee",
+    "food food served from 12:00 pm - 1:00 pm",
+    "iced tea and water at each place setting",
+    "registration open from 4:00 pm - 6:00 pm.",
+    "service 12:30pm-1:30pm",
+    "starbucks regular coffee",
+    "tableside starbucks coffee service",
+    "$34.00 per person",
+    "based on 60 minutes of continuous service",
+    "leave out additional 30 minutes until 2pm",
+    "toppings",
 }
 
 
@@ -406,6 +821,7 @@ def annotate_menu_sections_with_production(menu_sections: list[dict]) -> list[di
         filtered_items = []
         hot_items: list[str] = []
         cold_items: list[str] = []
+        dietary_items: list[str] = []
         non_kitchen_items: list[str] = []
         unknown_items: list[str] = []
         for item in section.get("items", []):
@@ -419,6 +835,8 @@ def annotate_menu_sections_with_production(menu_sections: list[dict]) -> list[di
                 hot_items.append(item["name"])
             elif zone == "cold_kitchen":
                 cold_items.append(item["name"])
+            elif zone == "dietary":
+                dietary_items.append(item["name"])
             elif production_area["reason"] != "no_matching_rule":
                 non_kitchen_items.append(item["name"])
             else:
@@ -427,6 +845,7 @@ def annotate_menu_sections_with_production(menu_sections: list[dict]) -> list[di
         section["operational_split"] = {
             "hot_kitchen_items": hot_items,
             "cold_kitchen_items": cold_items,
+            "dietary_items": dietary_items,
             "non_kitchen_items": non_kitchen_items,
             "unknown_items": unknown_items,
         }
@@ -442,7 +861,64 @@ def _classify_item(section: dict, item: dict) -> dict:
     section_type = (section.get("type") or "").strip().lower()
     course_type = (section.get("course_type") or "").strip().lower()
 
+    if _is_dietary_item(item_name):
+        return _build_production_area("dietary", "high", "dietary_item_rule")
+    if section_title == "yogurt parfait bar" and item_name in {
+        "greek yogurt",
+        "vanilla yogurt",
+        "blueberries",
+        "strawberries",
+        "raw honeycomb",
+        "organic granola",
+        "sliced almonds",
+        "chia seeds",
+    }:
+        return _build_production_area("cold_kitchen", "high", "section_context_rule:yogurt_parfait_bar")
+    if section_title == "tea thyme" and item_name in {
+        "egg salad on mini croissant",
+        "queen elizabeth's curried chicken salad on brioche",
+        "cold smoked sockeye salmon",
+        "herb & garlic boursin",
+        "garlic boursin",
+        "bagel crisp",
+        "assorted scones",
+        "macarons - assorted flavors",
+        "petite four mini desserts",
+        "chocolate dipped strawberries",
+    }:
+        return _build_production_area("cold_kitchen", "high", "section_context_rule:tea_thyme")
+    if section_title == "everyday is a sundae" and item_name in {
+        "chocolate ice cream",
+        "vanilla ice cream",
+        "oreo cookie",
+        "cherries",
+        "whipped cream",
+        "crushed peanuts",
+        "caramel topping",
+        "strawberry topping",
+        "chocolate topping",
+        "sprinkles",
+    }:
+        return _build_production_area("cold_kitchen", "high", "section_context_rule:everyday_is_a_sundae")
+    if item_name == "everyday is a sundae":
+        return _build_production_area("cold_kitchen", "high", "source_text_rule:everyday_is_a_sundae")
+    if item_name == "smoothie bar" or item_name in {
+        "the mango pineapple",
+        "the banana strawberry",
+        "the mixed berry",
+    }:
+        return _build_production_area("cold_kitchen", "high", "source_text_rule:smoothie_bar")
+    if source_text == "mango, pineapple, coconut water" and item_name in {"mango", "pineapple", "coconut water"}:
+        return _build_production_area("cold_kitchen", "high", "source_text_rule:smoothie_bar")
+    if source_text == "banana, strawberry, vanilla yogurt" and item_name in {"banana", "strawberry", "vanilla yogurt"}:
+        return _build_production_area("cold_kitchen", "high", "source_text_rule:smoothie_bar")
+    if source_text == "mixed berries, agave" and item_name in {"mixed berries", "agave"}:
+        return _build_production_area("cold_kitchen", "high", "source_text_rule:smoothie_bar")
     if item_name in IGNORED_ITEM_RULES or item_name.startswith("upon requests") or item_name.startswith("upon request"):
+        return _build_production_area("ignored", "high", "ignored_item_rule")
+    if any(re.match(pattern, item_name) for pattern in IGNORED_ITEM_PATTERNS):
+        return _build_production_area("ignored", "high", "ignored_item_rule")
+    if section_title == "items" and item_name in {"gatorade", "mimosa", "red bull", "soft drinks"}:
         return _build_production_area("ignored", "high", "ignored_item_rule")
     if section_title in {"boxed lunch", "box lunch"}:
         return _build_production_area("cold_kitchen", "high", "section_context_rule:boxed_lunch")
@@ -452,6 +928,32 @@ def _classify_item(section: dict, item: dict) -> dict:
         return _build_production_area("cold_kitchen", "high", "source_text_rule:popcorn_variant")
     if "popcorn" in source_text and item_name in {"butter", "jalapeno", "kettle"}:
         return _build_production_area("cold_kitchen", "high", "source_text_rule:popcorn_flavor")
+    if source_text == "chocolate & vanilla ice cream" and item_name in {
+        "chocolate",
+        "chocolate ice cream",
+        "vanilla",
+        "vanilla ice cream",
+    }:
+        return _build_production_area("cold_kitchen", "high", "source_text_rule:everyday_is_a_sundae")
+    if source_text == "oreo cookie, cherries, whipped cream, crushed peanuts, caramel topping, strawberry topping, chocolate topping, sprinkles" and item_name in {
+        "oreo cookie",
+        "cherries",
+        "whipped cream",
+        "crushed peanuts",
+        "caramel topping",
+        "strawberry topping",
+        "chocolate topping",
+        "sprinkles",
+    }:
+        return _build_production_area("cold_kitchen", "high", "source_text_rule:everyday_is_a_sundae")
+    if source_text == "choose 2: tomatoes, peppers," and item_name in {"choose 2: tomatoes", "peppers"}:
+        return _build_production_area("ignored", "high", "ignored_item_rule")
+    if source_text == "(150) peruvian ceviche, lime, red onion, habanero passed @ $7 each" and item_name in {"lime", "habanero passed"}:
+        return _build_production_area("cold_kitchen", "high", "source_text_rule:peruvian_ceviche")
+    if source_text == "(150) crispy vegetable dumpling, ponzu sauce passed* @ $6.5 each" and item_name == "ponzu sauce passed*":
+        return _build_production_area("hot_kitchen", "high", "source_text_rule:crispy_vegetable_dumpling")
+    if item_name == "butter" and "rolls & butter" in source_text:
+        return _build_production_area("ignored", "high", "ignored_item_rule")
     if item_name in {"tomato", "onion"} and any(
         marker in source_text
         for marker in (
@@ -492,14 +994,43 @@ def _classify_item(section: dict, item: dict) -> dict:
 
 def _normalize_item_name(item_name: str) -> str:
     normalized = item_name
+    normalized = normalized.replace("*", "")
     for prefix in ("salad;", "salads;", "dessert;", "desserts;"):
         if normalized.startswith(prefix):
             normalized = normalized[len(prefix) :].strip()
+    normalized = re.sub(r"^\(__\)\s*", "", normalized)
+    normalized = re.sub(r"^\d+\)\s*", "", normalized)
+    normalized = re.sub(r"^\(\d+\)\s*", "", normalized)
     if normalized == "buffalo sauce on side":
         normalized = "buffalo sauce"
-    normalized = re.sub(r"\s*@\s*\$[\d.]+(?:\s+each)?$", "", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(
+        r"\s*@\s*\$[\d.]+(?:\s+(?:each|per\s+(?:dozen|gallon|bottle)))?$",
+        "",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    replacements = {
+        "mini corn dogs": "mini corndogs",
+    }
+    normalized = replacements.get(normalized, normalized)
     normalized = " ".join(normalized.split())
     return normalized
+
+
+def _is_dietary_item(item_name: str) -> bool:
+    return bool(
+        re.search(r"\b(?:no pecans?|no pecan|dairy free dessert)\b", item_name, re.IGNORECASE)
+        or re.fullmatch(
+            r"\(?(?:\d+)\)?\s+(?:vegan/vegeterian|vegan/vegetarian|vegan salads?|vegetarian salads?|vegeterian salads?|dairy free salads?|gluten free salads?|gluten-free salads?|no pecan salads?|vegan|vegetarian|vegeterian|dairy free|gluten free|gluten-free|celiac|peanut allergy|tree nut allergy|nut allergy|shellfish allergy|seafood allergy)",
+            item_name,
+            re.IGNORECASE,
+        )
+        or re.fullmatch(
+            r"(?:vegan/vegeterian|vegan/vegetarian|vegan salads?|vegetarian salads?|vegeterian salads?|dairy free salads?|gluten free salads?|gluten-free salads?|no pecan salads?|vegan|vegetarian|vegeterian|dairy free|gluten free|gluten-free|celiac|peanut allergy|tree nut allergy|nut allergy|shellfish allergy|seafood allergy)",
+            item_name,
+            re.IGNORECASE,
+        )
+    )
 
 
 def _build_production_area(zone: str, confidence: str, reason: str) -> dict:

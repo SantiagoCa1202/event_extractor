@@ -1,4 +1,6 @@
+import os
 import unittest
+from unittest.mock import patch
 
 from beo_pipeline import extract_events_from_text_pages
 
@@ -99,6 +101,28 @@ U-Shape
         ]
         events = extract_events_from_text_pages(pages)
         self.assertEqual(events, [])
+
+    def test_includes_non_food_function_when_scope_is_all(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 708251
+FUNCTION DAY/DATE: Monday, April 06, 2026
+ORGANIZATION: Maximo Utility Working Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+2:00 PM-5:00 PM Meeting Cardinal Ballroom Foyer 1 30
+2:00 PM Meeting Cardinal Ballroom Foyer
+(25) Assorted Pepsi Products @ $4.5 Each
+Water Station
+ROOM SETUP 2:00 PM-5:00 PM Meeting Cardinal Ballroom Foyer
+U-Shape
+"""
+        ]
+        with patch.dict(os.environ, {"EVENT_FUNCTIONS_SCOPE": "all"}, clear=False):
+            events = extract_events_from_text_pages(pages)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["service"]["function"], "Meeting")
+        self.assertIn("included_by_scope:all_functions", events[0]["notes"])
 
     def test_omits_offsite_group_logistics_that_are_not_hotel_food_service(self) -> None:
         pages = [
@@ -345,6 +369,7 @@ Cocktail
         self.assertEqual(len(dietary), 4)
         self.assertEqual(dietary[0]["guest_name"], "Scott Z.")
         self.assertEqual(dietary[0]["restrictions"], ["Banana"])
+        self.assertEqual(dietary[0]["temperature_zone"], "dietary")
         self.assertEqual(
             dietary[3]["restrictions"],
             ["Gluten", "Garlic", "Onion", "Cashew", "Shellfish", "Beef"],
@@ -352,6 +377,135 @@ Cocktail
         menu_names = [item for section in event["details"]["menu_sections"] for item in section["operational_split"]["unknown_items"]]
         self.assertNotIn("Banana", menu_names)
         self.assertIn("dietary_restrictions", event["tags"])
+
+    def test_extracts_special_dietary_counts_without_treating_them_as_menu_items(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 731421
+FUNCTION DAY/DATE: Monday, April 20, 2026
+ORGANIZATION: Example Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+9:00 AM-10:00 AM Breakfast Buffet Symphony 25
+9:00 AM Breakfast Buffet Symphony
+The Uptown
+Assorted Danish, Croissants, Biscuits
+Scrambled Eggs
+Based on 60 Minutes of Continuous Service
+4 Vegan
+5 Vegetarian
+1 Dairy Free
+1 Peanut Allergy
+1 Tree Nut Allergy
+ROOM SETUP 9:00 AM-10:00 AM Breakfast Buffet Symphony
+Rounds of 10
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(len(events), 1)
+        event = events[0]
+        dietary = event["details"]["dietary_restrictions"]
+        self.assertEqual(
+            dietary,
+            [
+                {"guest_name": None, "restrictions": ["Vegan"], "count": 4, "kind": "special_count", "source_text": "4 Vegan", "temperature_zone": "dietary"},
+                {"guest_name": None, "restrictions": ["Vegetarian"], "count": 5, "kind": "special_count", "source_text": "5 Vegetarian", "temperature_zone": "dietary"},
+                {"guest_name": None, "restrictions": ["Dairy Free"], "count": 1, "kind": "special_count", "source_text": "1 Dairy Free", "temperature_zone": "dietary"},
+                {"guest_name": None, "restrictions": ["Peanut Allergy"], "count": 1, "kind": "special_count", "source_text": "1 Peanut Allergy", "temperature_zone": "dietary"},
+                {"guest_name": None, "restrictions": ["Tree Nut Allergy"], "count": 1, "kind": "special_count", "source_text": "1 Tree Nut Allergy", "temperature_zone": "dietary"},
+            ],
+        )
+        menu_item_names = [item["name"] for section in event["details"]["menu_sections"] for item in section["items"]]
+        self.assertNotIn("4 Vegan", menu_item_names)
+        self.assertNotIn("1 Dairy Free", menu_item_names)
+        self.assertNotIn("1 Peanut Allergy", menu_item_names)
+        self.assertIn("dietary_restrictions", event["tags"])
+
+    def test_extracts_special_dietary_salad_counts(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 731422
+FUNCTION DAY/DATE: Monday, April 20, 2026
+ORGANIZATION: Example Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+12:00 PM-1:00 PM Lunch Buffet Symphony 25
+12:00 PM Lunch Buffet Symphony
+Mixed Greens
+4 vegan salads
+1 vegetarian salad
+1 dairy free salad
+2 no pecan salad
+ROOM SETUP 12:00 PM-1:00 PM Lunch Buffet Symphony
+Rounds of 10
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(len(events), 1)
+        dietary = events[0]["details"]["dietary_restrictions"]
+        self.assertEqual(
+            dietary,
+            [
+                {"guest_name": None, "restrictions": ["Vegan Salad"], "count": 4, "kind": "special_count", "source_text": "4 vegan salads", "temperature_zone": "dietary"},
+                {"guest_name": None, "restrictions": ["Vegetarian Salad"], "count": 1, "kind": "special_count", "source_text": "1 vegetarian salad", "temperature_zone": "dietary"},
+                {"guest_name": None, "restrictions": ["Dairy Free Salad"], "count": 1, "kind": "special_count", "source_text": "1 dairy free salad", "temperature_zone": "dietary"},
+                {"guest_name": None, "restrictions": ["No Pecan Salad"], "count": 2, "kind": "special_count", "source_text": "2 no pecan salad", "temperature_zone": "dietary"},
+            ],
+        )
+
+    def test_parses_hyphenated_attendance_room_columns_and_convention_carolina_gtd(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 999001
+FUNCTION DAY/DATE: Wednesday, May 13, 2026
+ORGANIZATION: Example Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+12:00 PM-4:00 PM Coffee Break Symphony 2 - Symphony 2 15
+12:00 PM-1:30 PM Special Symphony 2 - Symphony 2 15
+8:15 AM-9:30 AM Breakfast Buffet Cardinal Ballroom - Cardinal 25 Ballroom Foyer
+12:00 PM-4:00 PM Coffee Break Convention/Carolina 36 Ballroom Foyer
+12:00 PM Coffee Break Symphony 2
+Coffee
+12:00 PM Special Symphony 2
+Buffet
+8:15 AM Breakfast Buffet Cardinal Ballroom Foyer
+Continental
+Danish
+12:00 PM Coffee Break Convention/Carolina Ballroom Foyer
+Coffee
+ROOM SETUP 12:00 PM-4:00 PM Coffee Break Symphony 2
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+
+        symphony_break = next(
+            event
+            for event in events
+            if event["service"]["function"] == "Coffee Break" and event["service"]["room"] == "Symphony 2"
+        )
+        self.assertEqual(symphony_break["service"]["gtd"], 15)
+        self.assertEqual(symphony_break["service"]["time"]["end"], "4:00 PM")
+
+        symphony_special = next(
+            event
+            for event in events
+            if event["service"]["function"] == "Special" and event["service"]["room"] == "Symphony 2"
+        )
+        self.assertEqual(symphony_special["service"]["gtd"], 15)
+        self.assertEqual(symphony_special["service"]["time"]["end"], "1:30 PM")
+
+        breakfast = next(event for event in events if event["service"]["function"] == "Breakfast Buffet")
+        self.assertEqual(breakfast["service"]["room"], "Cardinal Ballroom Foyer")
+        self.assertEqual(breakfast["service"]["gtd"], 25)
+
+        convention_break = next(
+            event
+            for event in events
+            if event["service"]["function"] == "Coffee Break"
+            and event["service"]["room"] == "Convention/Carolina Ballroom Foyer"
+        )
+        self.assertEqual(convention_break["service"]["gtd"], 36)
 
 
 if __name__ == "__main__":

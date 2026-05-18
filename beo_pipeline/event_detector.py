@@ -12,6 +12,8 @@ KNOWN_FUNCTIONS = [
     "Breakfast Buffet",
     "Lunch Buffet",
     "Dinner Buffet",
+    "Boxed Lunch",
+    "Box Lunch",
     "Plated Lunch",
     "Plated Dinner",
     "Coffee Break",
@@ -42,10 +44,10 @@ ROOM_SPECS = [
     },
     {
         "canonical": "Cardinal Ballroom",
-        "aliases": ("Cardinal Ballroom",),
+        "aliases": ("Cardinal Ballroom", "Cardinal"),
         "numbers": set(),
         "letters": set(),
-        "keywords": {"foyer"},
+        "keywords": {"ballroom", "foyer"},
     },
     {
         "canonical": "Symphony",
@@ -109,6 +111,13 @@ ROOM_SPECS = [
         "numbers": set(),
         "letters": set(),
         "keywords": set(),
+    },
+    {
+        "canonical": "Convention/Carolina Ballroom Foyer",
+        "aliases": ("Convention/Carolina",),
+        "numbers": set(),
+        "letters": set(),
+        "keywords": {"ballroom", "foyer"},
     },
 ]
 
@@ -261,16 +270,23 @@ def _match_attendance(
     normalized_function = function_name.lower()
     normalized_room = (room or "").lower()
 
-    for entry in entries:
-        if _normalize_time(entry.start) != normalized_start:
-            continue
-        if entry.function_name.lower() == normalized_function:
-            return entry
+    if normalized_room:
+        for entry in entries:
+            if _normalize_time(entry.start) != normalized_start:
+                continue
+            if entry.room and normalized_room in entry.room.lower() and entry.function_name.lower() == normalized_function:
+                return entry
+
+        for entry in entries:
+            if _normalize_time(entry.start) != normalized_start:
+                continue
+            if entry.room and normalized_room in entry.room.lower():
+                return entry
 
     for entry in entries:
         if _normalize_time(entry.start) != normalized_start:
             continue
-        if normalized_room and entry.room and normalized_room in entry.room.lower():
+        if entry.function_name.lower() == normalized_function:
             return entry
 
     for entry in entries:
@@ -297,10 +313,28 @@ def _extract_room_and_gtd(value: str | None) -> tuple[str | None, int | None]:
     if not cleaned:
         return None, None
 
-    parsed_room, parsed_gtd = _parse_known_room_and_gtd(cleaned)
-    if parsed_room:
-        return parsed_room, parsed_gtd
+    matched_without_gtd: tuple[str | None, int | None] | None = None
+    for candidate in _candidate_room_values(cleaned):
+        parsed_room, parsed_gtd = _parse_known_room_and_gtd(candidate)
+        if parsed_room:
+            if parsed_gtd is not None:
+                return parsed_room, parsed_gtd
+            if matched_without_gtd is None:
+                matched_without_gtd = (parsed_room, parsed_gtd)
+    if matched_without_gtd:
+        return matched_without_gtd
     return _clean_room(cleaned, None), _extract_last_integer(cleaned)
+
+
+def _candidate_room_values(value: str) -> list[str]:
+    candidates = [value]
+    if " - " in value:
+        left, right = value.split(" - ", 1)
+        if right:
+            candidates.insert(0, right.strip())
+        if left:
+            candidates.append(left.strip())
+    return candidates
 
 
 def _strip_room_value(value: str | None) -> str | None:
@@ -340,7 +374,9 @@ def _parse_known_room_and_gtd(value: str) -> tuple[str | None, int | None]:
                 previous_was_room_token = True
                 continue
             if lower_token in spec["keywords"]:
-                room_parts.append(token.strip(",;").title())
+                keyword = token.strip(",;").title()
+                if keyword.lower() not in " ".join(room_parts).lower().split():
+                    room_parts.append(keyword)
                 previous_was_room_token = True
                 continue
             if re.fullmatch(r"\d{1,4}", normalized):

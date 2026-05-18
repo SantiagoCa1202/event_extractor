@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from config import include_all_event_functions
+
 from .food_service_filter import is_food_service_function
 from .menu_extractor import derive_menu_style, extract_dietary_restrictions, extract_menu_sections
 from .menu_normalizer import build_menu_fingerprint
@@ -17,6 +19,7 @@ from .validators import validate_event_payload
 
 def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict | None:
     cleaned_raw, dietary_restrictions = extract_dietary_restrictions(candidate.raw)
+    dietary_restrictions = _annotate_dietary_restrictions(dietary_restrictions)
     menu_sections = extract_menu_sections(cleaned_raw)
     menu_item_count = sum(len(section.items) for section in menu_sections)
     item_names = [item.name for section in menu_sections for item in section.items]
@@ -26,7 +29,7 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
         menu_item_count,
         item_names,
     )
-    if not is_food:
+    if not is_food and not include_all_event_functions():
         return None
 
     service_info = classify_service(candidate.function_name, candidate.raw, menu_sections)
@@ -38,6 +41,8 @@ def build_event_object(document: BeoDocument, candidate: EventCandidate) -> dict
     staffing = _extract_staffing(candidate.raw)
     confidence = infer_confidence(candidate.attendance_match is not None, menu_item_count, len(filter_reasons))
     notes = list(filter_reasons)
+    if not is_food:
+        notes.append("included_by_scope:all_functions")
 
     for decision in setup["rule_trace"]["pending"]:
         notes.append(f"pending_rule:{decision.target}:{decision.reason}")
@@ -113,6 +118,15 @@ def _extract_staffing(raw_block: str) -> Staffing:
         if match:
             setattr(staffing, field_name, int(match.group(1)))
     return staffing
+
+
+def _annotate_dietary_restrictions(dietary_restrictions: list[dict]) -> list[dict]:
+    annotated: list[dict] = []
+    for entry in dietary_restrictions or []:
+        enriched = dict(entry)
+        enriched["temperature_zone"] = "dietary"
+        annotated.append(enriched)
+    return annotated
 
 
 def _build_tags(candidate: EventCandidate, service_info: dict[str, str], dietary_restrictions: list[dict] | None = None) -> list[str]:

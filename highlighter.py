@@ -1,5 +1,7 @@
-﻿import fitz
+import os
 import re
+
+import fitz
 
 from event_functions import EVENT_FUNCTION_REGEX_FRAGMENT, FUNCTION_KEYWORDS
 from food_dictionary import cold_items, hot_items, type_events_items
@@ -124,6 +126,13 @@ def subrayar_pdf_por_categoria(ruta_pdf_entrada, ruta_pdf_salida):
 
     for i in reversed(paginas_a_eliminar):
         doc.delete_page(i)
+
+    output_dir = os.path.dirname(ruta_pdf_salida)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    if os.path.exists(ruta_pdf_salida):
+        os.remove(ruta_pdf_salida)
 
     doc.save(ruta_pdf_salida)
     doc.close()

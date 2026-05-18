@@ -40,6 +40,25 @@ def normalize_item_line(line: str) -> list[MenuItem]:
         notes = "Charged on consumption"
         no_price = re.sub(r"(?i)charged on consumption", "", no_price).strip(", ")
 
+    manual_multi_item_lines = {
+        "herb marinated chicken breast, garlic & cajun shrimp": [
+            "Herb Marinated Chicken Breast",
+            "Garlic & Cajun Shrimp",
+        ],
+        "breakfast pastries, croissants & mini biscuits with strawberry and apricot": [
+            "Breakfast Pastries",
+            "Croissants",
+            "Mini Biscuits",
+            "Strawberry",
+            "Apricot",
+        ],
+    }
+    if no_price.lower() in manual_multi_item_lines:
+        return [
+            MenuItem(name=name, quantity=None, unit=None, notes=notes, source_text=line)
+            for name in manual_multi_item_lines[no_price.lower()]
+        ]
+
     if _should_keep_whole(no_price):
         return [MenuItem(name=no_price, quantity=quantity, unit=unit, notes=notes, source_text=line)]
 
@@ -69,14 +88,20 @@ def _should_keep_whole(value: str) -> bool:
     preserve_whole_phrases = (
         "garlic & chili broccolini",
         "creamy mac & cheese",
+        "mac & cheese",
+        "mac & cheese bites",
         "macaroni & cheese bites",
+        "garlic & cajun shrimp",
+        "butternut squash ravioli - brown butter, pecans, crispy sage",
+        "spinach, mushroom, onion, garlic cream sauce",
+        "grilled beef coulotte, chimichurri, chipotle aioli",
         "corn & black bean salad",
         "badass bobs pretzels with whole grain mustard",
         "hazel nut crunch cake & brule cheesecake",
         "pimento cheese & pickled shrimp bruschetta crostini",
         "assorted granola, protein and breakfast bars",
     )
-    if any(phrase in lower for phrase in preserve_whole_phrases):
+    if lower in preserve_whole_phrases:
         return True
     guarded_tokens = (
         " with ",
@@ -122,5 +147,8 @@ def _normalize_special_cases(value: str) -> str:
         "protein and power bars": "Protein and Breakfast Bars",
         "assorted granola, protein and power bars": "Assorted Granola, Protein and Breakfast Bars",
         "rolls & butter": "Rolls with Butter",
+        "assorted rolls & butter": "Assorted Rolls with Butter",
+        "macaroni & cheese bites": "Mac & Cheese Bites",
+        "mac & cheese bites": "Mac & Cheese Bites",
     }
     return replacements.get(lower, normalized)

@@ -25,6 +25,9 @@ NOISE_PATTERNS = (
     r"^\$\d",
     r"^post as:",
     r"^special$",
+    r"^note$",
+    r"^\d+\s*-\s*vegetarian/vegan$",
+    r"^\d+\s*-\s*gluten free$",
     r"^arrangements$",
     r"^room setup",
     r"^\(.+\)$",
@@ -59,6 +62,7 @@ NOISE_PATTERNS = (
     r"^after dinner$",
     r"^\**\s*\(.+\)\s+.*bar.+move into ballroom$",
     r"^\**\s*dietary needs in food header below:?$",
+    r"^please leave non-perishable items out until end of morning break\b",
     r"^[o]\s*(?:\(cid:\d+\))?\s*(?:breakfast|lunch|dinner)\s+options\s+for\s+dr\.?\s+.+:?$",
 )
 CONTRACTUAL_NOISE_PATTERNS = (
@@ -234,6 +238,10 @@ def extract_dietary_restrictions(raw_block: str) -> tuple[str, list[dict[str, An
     for raw_line in lines:
         line = _clean_line(raw_line)
         lower = line.lower()
+        special_count = _parse_special_dietary_count_line(line)
+        if special_count is not None:
+            restrictions.append(special_count)
+            continue
         if lower in {"dietary restrictions", "dietary restrictions:", "dietary:", "dietary"}:
             collecting = True
             continue
@@ -320,7 +328,7 @@ def extract_menu_sections(raw_block: str) -> list[MenuSection]:
             continue
 
         if _looks_like_priced_item(line):
-            if current is None:
+            if current is None or current.title.lower() in JOINED_SECTION_TITLES:
                 current = _create_section("Items")
                 sections.append(current)
             current.items.extend(normalize_item_line(line))
@@ -438,11 +446,62 @@ def _parse_dietary_restriction_line(line: str) -> dict[str, Any] | None:
     }
 
 
+def _parse_special_dietary_count_line(line: str) -> dict[str, Any] | None:
+    match = re.fullmatch(
+        r"\(?(?P<count>\d+)\)?\s+(?P<label>vegan/vegeterian|vegan/vegetarian|vegan salads?|vegetarian salads?|vegeterian salads?|dairy free salads?|gluten free salads?|gluten-free salads?|no pecan salads?|vegan|vegetarian|vegeterian|dairy free|gluten free|gluten-free|celiac|peanut allergy|tree nut allergy|nut allergy|shellfish allergy|seafood allergy)\b",
+        line.strip(),
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+
+    raw_label = match.group("label").strip().lower()
+    label_map = {
+        "vegeterian": "Vegetarian",
+        "vegan/vegeterian": "Vegan/Vegetarian",
+        "vegan/vegetarian": "Vegan/Vegetarian",
+        "vegan salad": "Vegan Salad",
+        "vegan salads": "Vegan Salad",
+        "vegetarian salad": "Vegetarian Salad",
+        "vegetarian salads": "Vegetarian Salad",
+        "vegeterian salad": "Vegetarian Salad",
+        "vegeterian salads": "Vegetarian Salad",
+        "dairy free salad": "Dairy Free Salad",
+        "dairy free salads": "Dairy Free Salad",
+        "gluten-free": "Gluten Free",
+        "gluten free": "Gluten Free",
+        "gluten free salad": "Gluten Free Salad",
+        "gluten free salads": "Gluten Free Salad",
+        "gluten-free salad": "Gluten Free Salad",
+        "gluten-free salads": "Gluten Free Salad",
+        "no pecan salad": "No Pecan Salad",
+        "no pecan salads": "No Pecan Salad",
+        "dairy free": "Dairy Free",
+        "peanut allergy": "Peanut Allergy",
+        "tree nut allergy": "Tree Nut Allergy",
+        "nut allergy": "Nut Allergy",
+        "shellfish allergy": "Shellfish Allergy",
+        "seafood allergy": "Seafood Allergy",
+        "vegan": "Vegan",
+        "vegetarian": "Vegetarian",
+        "celiac": "Celiac",
+    }
+    return {
+        "guest_name": None,
+        "restrictions": [label_map[raw_label]],
+        "count": int(match.group("count")),
+        "kind": "special_count",
+        "source_text": line.strip(),
+    }
+
+
 def _is_dietary_note_line(line: str) -> bool:
     lower = line.strip().lower()
     return bool(
         re.fullmatch(r"\d+\s+chef'?s choice .+", lower)
         or re.fullmatch(r"\d+\s+vegetarian options?", lower)
+        or re.fullmatch(r"\d+\s*-\s*vegetarian/vegan", lower)
+        or re.fullmatch(r"\d+\s*-\s*gluten free", lower)
         or re.fullmatch(r"please have .+", lower)
         or re.fullmatch(r"no nuts!+", lower)
     )
@@ -633,6 +692,7 @@ def _create_section(title: str, preferred_type: str | None = None) -> MenuSectio
 
 def _post_process_section(section: MenuSection) -> MenuSection:
     section = _collapse_boxed_lunch_items(section)
+    section = _collapse_composed_priced_items(section)
     quantity_only_items = []
     for item in section.items:
         name = (item.name or "").strip().lower()
@@ -914,6 +974,45 @@ def _collapse_boxed_lunch_items(section: MenuSection) -> MenuSection:
             if item.source_text:
                 source_parts = [part for part in [current_choice.source_text, item.source_text] if part]
                 current_choice.source_text = "\n".join(source_parts)
+
+    section.items = collapsed
+    return section
+
+
+def _collapse_composed_priced_items(section: MenuSection) -> MenuSection:
+    collapsed: list[MenuItem] = []
+    current_choice: MenuItem | None = None
+    continuation_names = {
+        "mason jar caesar": {
+            "baby gem",
+            "parmesan",
+            "roasted",
+            "tomato",
+            "garlic croutons",
+            "caesar dressing",
+        }
+    }
+
+    for item in section.items:
+        name = (item.name or "").strip()
+        lower = name.lower()
+        is_priced_choice = item.quantity is not None or bool(re.match(r"^\(\d+\)\s+.+@\s*\$[\d.]+", item.source_text or "", re.IGNORECASE))
+
+        if is_priced_choice:
+            current_choice = item
+            collapsed.append(item)
+            continue
+
+        if current_choice is not None:
+            target_name = (current_choice.name or "").strip().lower()
+            allowed_names = continuation_names.get(target_name)
+            if allowed_names and lower in allowed_names:
+                note_text = (item.source_text or name).strip(" ,")
+                note_parts = [part for part in [current_choice.notes, note_text] if part]
+                current_choice.notes = " | ".join(note_parts)
+                continue
+
+        collapsed.append(item)
 
     section.items = collapsed
     return section
