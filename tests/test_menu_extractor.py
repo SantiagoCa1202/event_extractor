@@ -480,11 +480,39 @@ class MenuExtractorTests(unittest.TestCase):
             ]
         )
         sections = extract_menu_sections(raw)
-        item_section = next(section for section in sections if section.title == "Items")
+        item_section = next(section for section in sections if section.title == "In a Glass")
         self.assertEqual([item.name for item in item_section.items], ["Mason Jar Caesar"])
-        self.assertIn("Baby Gem, Parmesan, Roasted", item_section.items[0].notes)
-        self.assertIn("Tomato, Garlic Croutons", item_section.items[0].notes)
-        self.assertIn("Caesar Dressing", item_section.items[0].notes)
+        self.assertEqual(
+            item_section.items[0].notes,
+            "Baby Gem, Parmesan, Roasted Tomato, Garlic Croutons, Caesar Dressing",
+        )
+
+    def test_splits_pasta_station_protein_modifiers_into_separate_items(self) -> None:
+        raw = "\n".join(
+            [
+                "5:30 PM Reception",
+                "Pasta Station",
+                "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan",
+                "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        pasta = next(section for section in sections if section.title == "Pasta Station")
+        self.assertEqual(
+            [item.name for item in pasta.items],
+            [
+                "Cavatappi Carbonara",
+                "Chicken",
+                "Wild Mushroom",
+                "Black Pepper",
+                "Parmesan",
+                "Vegetarian Penne a la Vodka",
+                "Grilled Chicken",
+                "Roasted Peppers",
+                "Squash",
+                "Spinach",
+            ],
+        )
 
     def test_queens_table_breaks_into_expected_sections(self) -> None:
         raw = "\n".join(
@@ -692,6 +720,36 @@ class MenuExtractorTests(unittest.TestCase):
             [item.name for item in passed_section.items],
             ["Stuffed Mushrooms", "Bacon Wrapped Scallops", "Blue Cheese Wellington"],
         )
+
+    def test_inline_passed_priced_items_use_passed_section(self) -> None:
+        raw = "\n".join(
+            [
+                "5:30 PM Reception",
+                "(150) Crispy Vegetable Dumpling, Ponzu Sauce **PASSED* @ $6.5 Each",
+                "(150) Peruvian Ceviche, Lime, Red Onion, Habanero **PASSED** @ $7 Each",
+                "(150) Herb Goat Cheese & Tomato Jam on Crostini PASSED @ $7 Each",
+                "(150) Beef Filet & Blue Cheese Wellington **PASSED** @ $8 Each",
+                "(200) Mac n' Cheese Bar",
+                "Grilled Chicken, Brisket Burnt Ends, Bacon Lardons",
+            ]
+        )
+        sections = extract_menu_sections(raw)
+        self.assertEqual(sections[0].title, "Passed")
+        self.assertEqual(
+            [item.name for item in sections[0].items],
+            [
+                "Crispy Vegetable Dumpling",
+                "Ponzu Sauce",
+                "Peruvian Ceviche",
+                "Lime",
+                "Red Onion",
+                "Habanero",
+                "Herb Goat Cheese & Tomato Jam on Crostini",
+                "Beef Filet",
+                "Blue Cheese Wellington",
+            ],
+        )
+        self.assertEqual(sections[1].title, "(200) Mac n' Cheese Bar")
 
     def test_reception_operational_bar_note_is_not_menu_style(self) -> None:
         raw = "\n".join(

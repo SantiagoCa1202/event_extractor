@@ -453,6 +453,30 @@ Rounds of 10
             ],
         )
 
+    def test_accepts_compact_lowercase_times_when_building_timeline(self) -> None:
+        pages = [
+            """EVENT ORDER Page # 1 of 1
+SHERATON CHARLOTTE HOTEL Event Order #: 731423
+FUNCTION DAY/DATE: Monday, April 20, 2026
+ORGANIZATION: Example Group
+ATTENDANCE
+TIME FUNCTION LOCATION ROOM RENTAL EXP GTD SET
+6:30pm-8:00pm Reception Symphony 40
+6:30pm Reception Symphony
+Cheese Display
+ROOM SETUP 6:30pm-8:00pm Reception Symphony
+Cocktail
+"""
+        ]
+        events = extract_events_from_text_pages(pages)
+        self.assertEqual(len(events), 1)
+        timeline = events[0]["timeline"]
+        self.assertEqual(timeline["setup"], "6:00 PM")
+        self.assertEqual(timeline["pickup_food"], "5:40 PM")
+        self.assertEqual(timeline["service_start"], "6:30pm")
+        self.assertEqual(timeline["service_end"], "8:00pm")
+        self.assertEqual(timeline["clean_up"], "8:40 PM")
+
     def test_parses_hyphenated_attendance_room_columns_and_convention_carolina_gtd(self) -> None:
         pages = [
             """EVENT ORDER Page # 1 of 1
