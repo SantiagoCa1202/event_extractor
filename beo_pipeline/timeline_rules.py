@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 
 
@@ -22,7 +23,7 @@ def build_timeline(start: str | None, end: str | None) -> dict:
 def _offset_time(value: str | None, minutes_before: int) -> str | None:
     if not value:
         return None
-    parsed = datetime.strptime(value, TIME_FORMAT)
+    parsed = _parse_time(value)
     adjusted = parsed - timedelta(minutes=minutes_before)
     return adjusted.strftime("%I:%M %p").lstrip("0")
 
@@ -30,6 +31,13 @@ def _offset_time(value: str | None, minutes_before: int) -> str | None:
 def _offset_time_after(value: str | None, minutes_after: int) -> str | None:
     if not value:
         return None
-    parsed = datetime.strptime(value, TIME_FORMAT)
+    parsed = _parse_time(value)
     adjusted = parsed + timedelta(minutes=minutes_after)
     return adjusted.strftime("%I:%M %p").lstrip("0")
+
+
+def _parse_time(value: str) -> datetime:
+    normalized = re.sub(r"\s+", " ", value.strip())
+    normalized = re.sub(r"(?i)\b(a|p)\.?m\.?\b", lambda match: f"{match.group(1).upper()}M", normalized)
+    normalized = re.sub(r"(?i)(\d)(AM|PM)\b", r"\1 \2", normalized)
+    return datetime.strptime(normalized, TIME_FORMAT)

@@ -6,7 +6,6 @@ build/
 __pycache__/
 *.pyc
 .idea/
-.vscode/
 .DS_Store
 node_modules/
 .env
@@ -31,3 +30,7 @@ pdfs/
 EO BATCH/
 uncategorized.txt
 REVISIONS/
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore

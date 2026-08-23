@@ -176,6 +176,7 @@ COURSE_HINTS = {
 }
 PASSED_PREFIX_RE = re.compile(r"^\(passed\)\s*", re.IGNORECASE)
 DISPLAYED_PREFIX_RE = re.compile(r"^\(displayed\)\s*", re.IGNORECASE)
+INLINE_PASSED_MARKER_RE = re.compile(r"\s+\*?passed\*?(?=\s*@|\s*$)", re.IGNORECASE)
 TITLE_VALUE_PREFIX_RE = re.compile(
     r"^(chef'?s choice|preset salad choice|preset salad|salad choice|salad|dessert choice|dessert|entree choice|entree)\s*\(?(?:title)?\)?\s*:\s*(.+)$",
     re.IGNORECASE,
@@ -325,6 +326,19 @@ def extract_menu_sections(raw_block: str) -> list[MenuSection]:
                 current = _create_section("Displayed")
                 sections.append(current)
             current.items.extend(normalize_item_line(DISPLAYED_PREFIX_RE.sub("", line)))
+            continue
+
+        if _has_inline_passed_marker(line):
+            if current is None or current.title != "Passed":
+                current = _create_section("Passed")
+                sections.append(current)
+            current.items.extend(_normalize_inline_passed_item_line(line))
+            continue
+
+        if _is_mason_jar_caesar_line(line):
+            current = _create_section("In a Glass")
+            sections.append(current)
+            current.items.extend(normalize_item_line(line))
             continue
 
         if _looks_like_priced_item(line):
@@ -590,6 +604,22 @@ def _looks_like_simple_item(line: str) -> bool:
 
 def _looks_like_priced_item(line: str) -> bool:
     return bool(re.match(r"^\(\d+\)\s+.+@\s*\$[\d.]+", line))
+
+
+def _has_inline_passed_marker(line: str) -> bool:
+    return bool(INLINE_PASSED_MARKER_RE.search(line))
+
+
+def _normalize_inline_passed_item_line(line: str) -> list[MenuItem]:
+    stripped_line = INLINE_PASSED_MARKER_RE.sub("", line)
+    items = normalize_item_line(stripped_line)
+    for item in items:
+        item.source_text = line
+    return items
+
+
+def _is_mason_jar_caesar_line(line: str) -> bool:
+    return bool(re.match(r"^\(\d+\)\s+mason jar caesar\b", line, re.IGNORECASE))
 
 
 def _looks_like_dash_title(value: str) -> bool:
@@ -982,6 +1012,7 @@ def _collapse_boxed_lunch_items(section: MenuSection) -> MenuSection:
 def _collapse_composed_priced_items(section: MenuSection) -> MenuSection:
     collapsed: list[MenuItem] = []
     current_choice: MenuItem | None = None
+    current_note_items: list[str] = []
     continuation_names = {
         "mason jar caesar": {
             "baby gem",
@@ -999,7 +1030,9 @@ def _collapse_composed_priced_items(section: MenuSection) -> MenuSection:
         is_priced_choice = item.quantity is not None or bool(re.match(r"^\(\d+\)\s+.+@\s*\$[\d.]+", item.source_text or "", re.IGNORECASE))
 
         if is_priced_choice:
+            _apply_composed_item_notes(current_choice, current_note_items)
             current_choice = item
+            current_note_items = []
             collapsed.append(item)
             continue
 
@@ -1007,15 +1040,44 @@ def _collapse_composed_priced_items(section: MenuSection) -> MenuSection:
             target_name = (current_choice.name or "").strip().lower()
             allowed_names = continuation_names.get(target_name)
             if allowed_names and lower in allowed_names:
-                note_text = (item.source_text or name).strip(" ,")
-                note_parts = [part for part in [current_choice.notes, note_text] if part]
-                current_choice.notes = " | ".join(note_parts)
+                current_note_items.append(name)
                 continue
 
+        _apply_composed_item_notes(current_choice, current_note_items)
+        current_choice = None
+        current_note_items = []
         collapsed.append(item)
 
+    _apply_composed_item_notes(current_choice, current_note_items)
     section.items = collapsed
     return section
+
+
+def _apply_composed_item_notes(item: MenuItem | None, note_items: list[str]) -> None:
+    if item is None or not note_items:
+        return
+    note_text = _format_composed_item_notes(note_items)
+    if not note_text:
+        return
+    note_parts = [part for part in [item.notes, note_text] if part]
+    deduped_parts = list(dict.fromkeys(note_parts))
+    item.notes = " | ".join(deduped_parts)
+    note_items.clear()
+
+
+def _format_composed_item_notes(note_items: list[str]) -> str:
+    normalized: list[str] = []
+    index = 0
+    while index < len(note_items):
+        name = note_items[index].strip(" ,")
+        if name.lower() == "roasted" and index + 1 < len(note_items) and note_items[index + 1].strip().lower() == "tomato":
+            normalized.append("Roasted Tomato")
+            index += 2
+            continue
+        normalized.append(name)
+        index += 1
+    normalized = [name for name in normalized if name]
+    return ", ".join(dict.fromkeys(normalized))
 
 
 def _combine_joined_section_items(section: MenuSection) -> MenuSection:

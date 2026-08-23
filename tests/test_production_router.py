@@ -1565,10 +1565,12 @@ class ProductionRouterTests(unittest.TestCase):
                 "service_role": "other",
                 "course_type": "other",
                 "items": [
-                    {"name": "Cavatappi Carbonara- Chicken", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
+                    {"name": "Cavatappi Carbonara", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
+                    {"name": "Chicken", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
                     {"name": "Wild Mushroom", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
                     {"name": "Parmesan", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
-                    {"name": "Vegetarian Penne a la Vodka- Grilled Chicken", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
+                    {"name": "Vegetarian Penne a la Vodka", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
+                    {"name": "Grilled Chicken", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
                     {"name": "Roasted Peppers", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
                     {"name": "Squash", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
                     {"name": "Spinach", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
@@ -1600,19 +1602,21 @@ class ProductionRouterTests(unittest.TestCase):
         annotated = annotate_menu_sections_with_production(sections)
 
         pasta_items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
-        self.assertEqual(pasta_items["Cavatappi Carbonara- Chicken"], "hot_kitchen")
+        self.assertEqual(pasta_items["Cavatappi Carbonara"], "hot_kitchen")
+        self.assertEqual(pasta_items["Chicken"], "hot_kitchen")
         self.assertEqual(pasta_items["Wild Mushroom"], "hot_kitchen")
         self.assertEqual(pasta_items["Parmesan"], "cold_kitchen")
-        self.assertEqual(pasta_items["Vegetarian Penne a la Vodka- Grilled Chicken"], "hot_kitchen")
-        self.assertEqual(pasta_items["Roasted Peppers"], "hot_kitchen")
-        self.assertEqual(pasta_items["Squash"], "hot_kitchen")
-        self.assertEqual(pasta_items["Spinach"], "hot_kitchen")
+        self.assertEqual(pasta_items["Vegetarian Penne a la Vodka"], "hot_kitchen")
+        self.assertEqual(pasta_items["Grilled Chicken"], "hot_kitchen")
+        self.assertEqual(pasta_items["Roasted Peppers"], "cold_kitchen")
+        self.assertEqual(pasta_items["Squash"], "cold_kitchen")
+        self.assertEqual(pasta_items["Spinach"], "cold_kitchen")
+        self.assertEqual(pasta_items["Crushed Pepper"], "cold_kitchen")
         self.assertEqual(pasta_items["Shredded Parmesan"], "cold_kitchen")
         self.assertEqual(pasta_items["Micro Basil"], "cold_kitchen")
         self.assertEqual(pasta_items["Crispy Onions"], "cold_kitchen")
         pasta_remaining = [item["name"] for item in annotated[0]["items"]]
         self.assertNotIn("Toppings", pasta_remaining)
-        self.assertNotIn("Crushed Pepper", pasta_remaining)
         self.assertNotIn("Based on 60 Minutes of Continuous Service", pasta_remaining)
         self.assertNotIn("$34.00 per Person", pasta_remaining)
         self.assertEqual(annotated[0]["operational_split"]["unknown_items"], [])
@@ -1625,6 +1629,50 @@ class ProductionRouterTests(unittest.TestCase):
         self.assertEqual(caesar_items["Garlic Croutons"], "cold_kitchen")
         self.assertEqual(caesar_items["Caesar Dressing"], "cold_kitchen")
         self.assertEqual(annotated[1]["operational_split"]["unknown_items"], [])
+
+    def test_routes_standard_pasta_station_toppings(self) -> None:
+        sections = [
+            {
+                "title": "Pasta Station",
+                "type": "station_items",
+                "service_role": "station",
+                "course_type": "other",
+                "items": [
+                    {"name": "Cavatappi Carbonara"},
+                    {"name": "Chicken"},
+                    {"name": "Wild Mushroom"},
+                    {"name": "Black Pepper"},
+                    {"name": "Parmesan"},
+                    {"name": "Vegetarian Penne a la Vodka"},
+                    {"name": "Grilled Chicken"},
+                    {"name": "Roasted Peppers"},
+                    {"name": "Squash"},
+                    {"name": "Spinach"},
+                    {"name": "Crushed Pepper"},
+                    {"name": "Shredded Parmesan"},
+                    {"name": "Micro Basil"},
+                    {"name": "Crispy Onions"},
+                ],
+            }
+        ]
+
+        annotated = annotate_menu_sections_with_production(sections)
+        items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(items["Cavatappi Carbonara"], "hot_kitchen")
+        self.assertEqual(items["Chicken"], "hot_kitchen")
+        self.assertEqual(items["Wild Mushroom"], "hot_kitchen")
+        self.assertEqual(items["Vegetarian Penne a la Vodka"], "hot_kitchen")
+        self.assertEqual(items["Grilled Chicken"], "hot_kitchen")
+        self.assertEqual(items["Black Pepper"], "cold_kitchen")
+        self.assertEqual(items["Parmesan"], "cold_kitchen")
+        self.assertEqual(items["Roasted Peppers"], "cold_kitchen")
+        self.assertEqual(items["Squash"], "cold_kitchen")
+        self.assertEqual(items["Spinach"], "cold_kitchen")
+        self.assertEqual(items["Crushed Pepper"], "cold_kitchen")
+        self.assertEqual(items["Shredded Parmesan"], "cold_kitchen")
+        self.assertEqual(items["Micro Basil"], "cold_kitchen")
+        self.assertEqual(items["Crispy Onions"], "cold_kitchen")
+        self.assertEqual(annotated[0]["operational_split"]["unknown_items"], [])
 
     def test_routes_seafood_display_menu_to_cold(self) -> None:
         sections = [
@@ -1988,6 +2036,10 @@ class ProductionRouterTests(unittest.TestCase):
                         "name": "(150) Beef Filet & Blue Cheese Wellington **PASSED** @ $8 Each",
                         "source_text": "(150) Beef Filet & Blue Cheese Wellington **PASSED** @ $8 Each",
                     },
+                    {"name": "Crisp Lemongrass Chicken Dumpling with Sweet Thai Sauce"},
+                    {"name": "Crispy Shrimp Dumpling with Lime Soy Sauce"},
+                    {"name": "Herb Goat Cheese & Tomato Jam on Crostini"},
+                    {"name": "Tomato Jam on Crostini"},
                 ],
             }
         ]
@@ -1998,6 +2050,10 @@ class ProductionRouterTests(unittest.TestCase):
         self.assertEqual(items["(150) Peruvian Ceviche, Lime, Red Onion, Habanero **PASSED** @ $7 Each"], "cold_kitchen")
         self.assertEqual(items["(150) Herb Goat Cheese & Tomato Jam on Crostini **PASSED** @ $7 Each"], "cold_kitchen")
         self.assertEqual(items["(150) Beef Filet & Blue Cheese Wellington **PASSED** @ $8 Each"], "hot_kitchen")
+        self.assertEqual(items["Crisp Lemongrass Chicken Dumpling with Sweet Thai Sauce"], "hot_kitchen")
+        self.assertEqual(items["Crispy Shrimp Dumpling with Lime Soy Sauce"], "hot_kitchen")
+        self.assertEqual(items["Herb Goat Cheese & Tomato Jam on Crostini"], "cold_kitchen")
+        self.assertEqual(items["Tomato Jam on Crostini"], "cold_kitchen")
         self.assertEqual(annotated[0]["operational_split"]["unknown_items"], [])
 
     def test_routes_smoothie_bar_menu_headers_and_component_lines_to_cold(self) -> None:
@@ -2125,7 +2181,8 @@ class ProductionRouterTests(unittest.TestCase):
                 "course_type": "other",
                 "items": [
                     {"name": "Black Pepper", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
-                    {"name": "Cavatappi Carbonara- Chicken", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
+                    {"name": "Cavatappi Carbonara", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
+                    {"name": "Chicken", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
                     {"name": "Crushed Pepper", "source_text": "Crushed Pepper, Shredded Parmesan"},
                     {"name": "Crispy Onions", "source_text": "Micro Basil, Crispy Onions"},
                     {"name": "Micro Basil", "source_text": "Micro Basil, Crispy Onions"},
@@ -2134,7 +2191,8 @@ class ProductionRouterTests(unittest.TestCase):
                     {"name": "Spinach", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
                     {"name": "Squash", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
                     {"name": "Toppings", "source_text": "Toppings-"},
-                    {"name": "Vegetarian Penne a la Vodka- Grilled Chicken", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
+                    {"name": "Vegetarian Penne a la Vodka", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
+                    {"name": "Grilled Chicken", "source_text": "Vegetarian Penne a la Vodka- Grilled Chicken, Roasted Peppers, Squash, Spinach"},
                     {"name": "Wild Mushroom", "source_text": "Cavatappi Carbonara- Chicken , Wild Mushroom, Black Pepper, Parmesan"},
                 ],
             },
@@ -2242,18 +2300,20 @@ class ProductionRouterTests(unittest.TestCase):
         self.assertEqual(mac_items["Parmesan Cheese"], "cold_kitchen")
 
         pasta_items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[4]["items"]}
-        self.assertEqual(pasta_items["Cavatappi Carbonara- Chicken"], "hot_kitchen")
+        self.assertEqual(pasta_items["Cavatappi Carbonara"], "hot_kitchen")
+        self.assertEqual(pasta_items["Chicken"], "hot_kitchen")
+        self.assertEqual(pasta_items["Black Pepper"], "cold_kitchen")
+        self.assertEqual(pasta_items["Crushed Pepper"], "cold_kitchen")
         self.assertEqual(pasta_items["Crispy Onions"], "cold_kitchen")
         self.assertEqual(pasta_items["Micro Basil"], "cold_kitchen")
-        self.assertEqual(pasta_items["Roasted Peppers"], "hot_kitchen")
+        self.assertEqual(pasta_items["Roasted Peppers"], "cold_kitchen")
         self.assertEqual(pasta_items["Shredded Parmesan"], "cold_kitchen")
-        self.assertEqual(pasta_items["Spinach"], "hot_kitchen")
-        self.assertEqual(pasta_items["Squash"], "hot_kitchen")
-        self.assertEqual(pasta_items["Vegetarian Penne a la Vodka- Grilled Chicken"], "hot_kitchen")
+        self.assertEqual(pasta_items["Spinach"], "cold_kitchen")
+        self.assertEqual(pasta_items["Squash"], "cold_kitchen")
+        self.assertEqual(pasta_items["Vegetarian Penne a la Vodka"], "hot_kitchen")
+        self.assertEqual(pasta_items["Grilled Chicken"], "hot_kitchen")
         self.assertEqual(pasta_items["Wild Mushroom"], "hot_kitchen")
         pasta_remaining = [item["name"] for item in annotated[4]["items"]]
-        self.assertNotIn("Black Pepper", pasta_remaining)
-        self.assertNotIn("Crushed Pepper", pasta_remaining)
         self.assertNotIn("Toppings", pasta_remaining)
 
         fajita_items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[5]["items"]}
@@ -2285,6 +2345,105 @@ class ProductionRouterTests(unittest.TestCase):
         deluxe_remaining = [item["name"] for item in annotated[7]["items"]]
         self.assertNotIn("Craft", deluxe_remaining)
         self.assertNotIn("Premium", deluxe_remaining)
+
+        for section in annotated:
+            self.assertEqual(section["operational_split"]["unknown_items"], [])
+
+    def test_routes_june_7_unknown_review_batch_without_unknowns(self) -> None:
+        sections = [
+            {
+                "title": "The Uptown",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "(17)Bagel Sandwich - Pork Sausage, Egg Patty, Cheddar Chez", "source_text": "(17)Bagel Sandwich - Pork Sausage, Egg Patty, Cheddar Chez"},
+                    {"name": "Biscuit Sandwich - Smoked Bacon, Egg Patty, Amer Chz", "source_text": "Biscuit Sandwich - Smoked Bacon, Egg Patty, Amer Chz"},
+                    {"name": "Jeff Gum - Vegan", "source_text": "Jeff Gum - Vegan"},
+                    {"name": "Patty O'Connor - Fish", "source_text": "Patty O'Connor - Fish"},
+                    {"name": "Sinead Runyon - Gluten Free", "source_text": "Sinead Runyon - Gluten Free"},
+                    {"name": "Fish", "source_text": "Fish"},
+                ],
+            },
+            {
+                "title": "Sessions",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "10:45am-12:00pm", "source_text": "10:45am-12:00pm"},
+                    {"name": "3:30pm-4:40pm", "source_text": "3:30pm-4:40pm"},
+                ],
+            },
+            {
+                "title": "Items",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "2 Gal Decaf", "source_text": "2 Gal Decaf"},
+                    {"name": "Cash House Wine Glass", "source_text": "Cash House Wine Glass"},
+                    {"name": "Custom SSID Flat Fee", "source_text": "Custom SSID Flat Fee"},
+                    {"name": "Starbucks Nitro Cold Brew", "source_text": "Starbucks Nitro Cold Brew"},
+                    {"name": "Registration Open - 8am-5pm", "source_text": "Registration Open - 8am-5pm"},
+                ],
+            },
+            {
+                "title": "Network Name",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "ACESymposium", "source_text": "ACESymposium"},
+                ],
+            },
+            {
+                "title": "The Uptown (Modified)",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Fresh Sliced Fruit * NO PINEAPPLE", "source_text": "Fresh Sliced Fruit * NO PINEAPPLE"},
+                ],
+            },
+            {
+                "title": "The Garden Table (Modified)",
+                "type": "course",
+                "service_role": "other",
+                "course_type": "other",
+                "items": [
+                    {"name": "Soup Du Jour (Vegetarian Option Only)", "source_text": "Soup Du Jour (Vegetarian Option Only)"},
+                ],
+            },
+        ]
+
+        annotated = annotate_menu_sections_with_production(sections)
+
+        uptown_items = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[0]["items"]}
+        self.assertEqual(uptown_items["(17)Bagel Sandwich - Pork Sausage, Egg Patty, Cheddar Chez"], "hot_kitchen")
+        self.assertEqual(uptown_items["Biscuit Sandwich - Smoked Bacon, Egg Patty, Amer Chz"], "hot_kitchen")
+        self.assertEqual(uptown_items["Jeff Gum - Vegan"], "dietary")
+        self.assertEqual(uptown_items["Patty O'Connor - Fish"], "dietary")
+        self.assertEqual(uptown_items["Sinead Runyon - Gluten Free"], "dietary")
+        self.assertEqual(uptown_items["Fish"], "dietary")
+
+        self.assertEqual(annotated[1]["items"], [])
+
+        item_zones = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[2]["items"]}
+        self.assertEqual(item_zones["Cash House Wine Glass"], "unknown")
+        self.assertEqual(item_zones["Starbucks Nitro Cold Brew"], "unknown")
+        items_remaining = [item["name"] for item in annotated[2]["items"]]
+        self.assertNotIn("2 Gal Decaf", items_remaining)
+        self.assertNotIn("Custom SSID Flat Fee", items_remaining)
+        self.assertNotIn("Registration Open - 8am-5pm", items_remaining)
+
+        self.assertEqual(annotated[3]["items"], [])
+
+        modified_uptown = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[4]["items"]}
+        self.assertEqual(modified_uptown["Fresh Sliced Fruit * NO PINEAPPLE"], "dietary")
+
+        garden_table = {item["name"]: item["production_area"]["temperature_zone"] for item in annotated[5]["items"]}
+        self.assertEqual(garden_table["Soup Du Jour (Vegetarian Option Only)"], "hot_kitchen")
 
         for section in annotated:
             self.assertEqual(section["operational_split"]["unknown_items"], [])

@@ -8,6 +8,27 @@ from .schemas import MenuItem
 
 PRICE_SUFFIX_RE = re.compile(r"\s*@\s*\$[\d.,]+(?:\s+per\s+\w+|\s+each)?", re.IGNORECASE)
 LEADING_QTY_RE = re.compile(r"^\((\d+)\)\s+(.+)$")
+MANUAL_MULTI_ITEM_LINES = {
+    "herb marinated chicken breast, garlic & cajun shrimp": [
+        "Herb Marinated Chicken Breast",
+        "Garlic & Cajun Shrimp",
+    ],
+    "breakfast pastries, croissants & mini biscuits with strawberry and apricot": [
+        "Breakfast Pastries",
+        "Croissants",
+        "Mini Biscuits",
+        "Strawberry",
+        "Apricot",
+    ],
+    "cavatappi carbonara- chicken": [
+        "Cavatappi Carbonara",
+        "Chicken",
+    ],
+    "vegetarian penne a la vodka- grilled chicken": [
+        "Vegetarian Penne a la Vodka",
+        "Grilled Chicken",
+    ],
+}
 
 
 def normalize_item_line(line: str) -> list[MenuItem]:
@@ -40,29 +61,21 @@ def normalize_item_line(line: str) -> list[MenuItem]:
         notes = "Charged on consumption"
         no_price = re.sub(r"(?i)charged on consumption", "", no_price).strip(", ")
 
-    manual_multi_item_lines = {
-        "herb marinated chicken breast, garlic & cajun shrimp": [
-            "Herb Marinated Chicken Breast",
-            "Garlic & Cajun Shrimp",
-        ],
-        "breakfast pastries, croissants & mini biscuits with strawberry and apricot": [
-            "Breakfast Pastries",
-            "Croissants",
-            "Mini Biscuits",
-            "Strawberry",
-            "Apricot",
-        ],
-    }
-    if no_price.lower() in manual_multi_item_lines:
+    if no_price.lower() in MANUAL_MULTI_ITEM_LINES:
         return [
             MenuItem(name=name, quantity=None, unit=None, notes=notes, source_text=line)
-            for name in manual_multi_item_lines[no_price.lower()]
+            for name in MANUAL_MULTI_ITEM_LINES[no_price.lower()]
         ]
 
     if _should_keep_whole(no_price):
         return [MenuItem(name=no_price, quantity=quantity, unit=unit, notes=notes, source_text=line)]
 
-    parts = [_normalize_special_cases(part.strip(" .")) for part in re.split(r",|(?<!\w)&(?!\w)|\+", no_price) if part.strip()]
+    parts = []
+    for part in re.split(r",|(?<!\w)&(?!\w)|\+", no_price):
+        normalized_part = _normalize_special_cases(part.strip(" ."))
+        if not normalized_part:
+            continue
+        parts.extend(MANUAL_MULTI_ITEM_LINES.get(normalized_part.lower(), [normalized_part]))
     if len(parts) <= 1:
         return [MenuItem(name=no_price, quantity=quantity, unit=unit, notes=notes, source_text=line)]
     return [MenuItem(name=part, quantity=None, unit=None, notes=notes, source_text=line) for part in parts]
@@ -99,6 +112,8 @@ def _should_keep_whole(value: str) -> bool:
         "badass bobs pretzels with whole grain mustard",
         "hazel nut crunch cake & brule cheesecake",
         "pimento cheese & pickled shrimp bruschetta crostini",
+        "herb goat cheese & tomato jam on crostini",
+        "herb goat cheese & tomato jam on crostini passed",
         "assorted granola, protein and breakfast bars",
     )
     if lower in preserve_whole_phrases:
